@@ -6,10 +6,12 @@ fn main() -> std::io::Result<()> {
     let args: Vec<String> = env::args().collect();
     println!("args: {:?}", args);
 
-    let num = &args[1];
-    println!("num: {}", num);
-
-    let mut f = File::create("num.txt")?;
-    f.write_fmt(format_args!("{}", num))?;
+    if args.len() == 2 {
+        let num = &args[1];
+        let mut f = File::create("num.txt")?;
+        f.write_fmt(format_args!("{}", num))?;
+    } else {
+        println!("Invalid!");
+    }
     Ok(())
 }
