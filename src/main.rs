@@ -12,8 +12,12 @@ fn main() -> std::io::Result<()> {
             _ => (),
         };
         let num = &args[1];
-        let mut f = File::create("output/num.txt")?;
-        f.write_fmt(format_args!("{}", num))?;
+        let mut f = File::create("output/tmp.s")?;
+        f.write_fmt(format_args!(".intel_syntax noprefix\n"))?;
+        f.write_fmt(format_args!(".global main\n"))?;
+        f.write_fmt(format_args!("main:\n"))?;
+        f.write_fmt(format_args!("    mov rax, {}\n", num))?;
+        f.write_fmt(format_args!("    ret\n"))?;
     } else {
         println!("Invalid!");
     }
