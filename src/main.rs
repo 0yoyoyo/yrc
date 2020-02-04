@@ -23,3 +23,19 @@ fn main() -> std::io::Result<()> {
     }
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    //use super::*;
+    use std::process::Command;
+
+    #[test]
+    fn return_val_0() {
+        let out = Command::new("bash")
+                          .arg("-c")
+                          .arg("script/test.sh 0 0")
+                          .output()
+                          .expect("Exec error!");
+        assert_eq!(b"0\n", out.stdout.as_slice());
+    }
+}
