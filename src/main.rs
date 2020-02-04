@@ -35,14 +35,24 @@ mod tests {
     use super::*;
     use std::process::Command;
 
-    #[test]
-    fn return_val_0() {
-        assert_eq!((), generate_asm(0).unwrap());
+    fn return_val_num(n: u32) {
+        assert_eq!((), generate_asm(n).unwrap());
         let out = Command::new("bash")
                           .arg("-c")
                           .arg("script/test.sh 0 0")
                           .output()
                           .expect("Exec error!");
-        assert_eq!(b"0\n", out.stdout.as_slice());
+        assert_eq!(format!("{}\n", n),
+                   String::from_utf8(out.stdout).unwrap());
+    }
+
+    #[test]
+    fn return_val_0() {
+        return_val_num(0);
+    }
+
+    #[test]
+    fn return_val_123() {
+        return_val_num(123);
     }
 }
