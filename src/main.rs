@@ -39,7 +39,7 @@ mod tests {
         assert_eq!((), generate_asm(n).unwrap());
         let out = Command::new("bash")
                           .arg("-c")
-                          .arg("script/test.sh 0 0")
+                          .arg("script/test.sh")
                           .output()
                           .expect("Exec error!");
         assert_eq!(format!("{}\n", n),
