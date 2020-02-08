@@ -53,24 +53,29 @@ mod tests {
     use super::*;
     use std::process::Command;
 
-    fn return_val_num(formula: &str) {
+    fn return_val_num(formula: &str, answer: u32) {
         assert_eq!((), generate_asm(formula).unwrap());
         let out = Command::new("bash")
                           .arg("-c")
                           .arg("script/test.sh")
                           .output()
                           .expect("Exec error!");
-        assert_eq!(format!("{}\n", formula),
+        assert_eq!(format!("{}\n", answer),
                    String::from_utf8(out.stdout).unwrap());
     }
 
     #[test]
     fn return_val_0() {
-        return_val_num("0");
+        return_val_num("0", 0);
     }
 
     #[test]
     fn return_val_123() {
-        return_val_num("123");
+        return_val_num("123", 123);
+    }
+
+    #[test]
+    fn return_val_formula() {
+        return_val_num("123 + 23 - 6", 140);
     }
 }
