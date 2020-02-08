@@ -3,6 +3,22 @@ use std::fs;
 use std::fs::File;
 use std::io::prelude::*;
 
+enum NodeKind {
+    NodeAdd,
+    NodeSub,
+}
+
+enum Node {
+    Operator {
+        kind: NodeKind,
+        lhs: Box<Node>,
+        rhs: Box<Node>,
+    },
+    Number {
+        val: u32,
+    },
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
     println!("args: {:?}", args);
@@ -17,33 +33,83 @@ fn main() {
     }
 }
 
-fn generate_asm(formula: &str) -> std::io::Result<()> {
-    match fs::create_dir("output") {
-        _ => (),
+fn new_node(kind: NodeKind, lhs: Box<Node>, rhs: Box<Node>) -> Box<Node> {
+    let node = Node::Operator {
+        kind: kind,
+        lhs: lhs,
+        rhs: rhs,
     };
-    let mut formula = formula.split_whitespace();
-    let mut f = File::create("output/tmp.s")?;
-    f.write_fmt(format_args!(".intel_syntax noprefix\n"))?;
-    f.write_fmt(format_args!(".global main\n"))?;
-    f.write_fmt(format_args!("main:\n"))?;
-    f.write_fmt(format_args!("    mov rax, {}\n",
-                             formula.next().unwrap()))?;
+    let node = Box::new(node);
+    node
+}
 
+fn new_node_num(val: u32) -> Box<Node> {
+    let node = Node::Number {
+        val: val,
+    };
+    let node = Box::new(node);
+    node
+}
+
+fn expr(formula: &str) -> Box<Node> {
+    let mut formula = formula.split_whitespace();
+
+    let mut node = new_node_num(formula.next().unwrap().parse().unwrap());
     loop {
         match formula.next() {
             Some(item) => {
                 if item == "+" {
-                    f.write_fmt(format_args!("    add rax, {}\n",
-                                             formula.next().unwrap()))?;
+                    node = new_node(NodeKind::NodeAdd,
+                                    node,
+                                    new_node_num(formula.next().unwrap().parse().unwrap()));
                 } else if item == "-" {
-                    f.write_fmt(format_args!("    sub rax, {}\n",
-                                             formula.next().unwrap()))?;
+                    node = new_node(NodeKind::NodeSub,
+                                    node,
+                                    new_node_num(formula.next().unwrap().parse().unwrap()));
                 }
             }
             None => break,
         }
     }
+    node
+}
 
+fn gen(f: &mut File, node: Box<Node>) {
+    match *node {
+        Node::Number {val} => {
+            f.write_fmt(format_args!("    push {}\n", val)).unwrap()
+        },
+        Node::Operator { kind, lhs, rhs} => {
+            gen(f, lhs);
+            gen(f, rhs);
+            f.write_fmt(format_args!("    pop rdi\n")).unwrap();
+            f.write_fmt(format_args!("    pop rax\n")).unwrap();
+            match kind {
+                NodeKind::NodeAdd => {
+                    f.write_fmt(format_args!("    add rax, rdi\n")).unwrap();
+                },
+                NodeKind::NodeSub => {
+                    f.write_fmt(format_args!("    sub rax, rdi\n")).unwrap();
+                },
+            }
+            f.write_fmt(format_args!("    push rax\n")).unwrap()
+        },
+    }
+}
+
+fn generate_asm(formula: &str) -> std::io::Result<()> {
+    match fs::create_dir("output") {
+        _ => (),
+    };
+    let mut f = File::create("output/tmp.s")?;
+    f.write_fmt(format_args!(".intel_syntax noprefix\n"))?;
+    f.write_fmt(format_args!(".global main\n"))?;
+    f.write_fmt(format_args!("main:\n"))?;
+
+    let node = expr(formula);
+    gen(&mut f, node);
+
+    f.write_fmt(format_args!("    pop rax\n"))?;
     f.write_fmt(format_args!("    ret\n"))?;
     Ok(())
 }
