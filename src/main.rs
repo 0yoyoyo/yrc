@@ -2,6 +2,7 @@ use std::env;
 use std::fs;
 use std::fs::File;
 use std::io::prelude::*;
+use NodeKind::*;
 
 enum NodeKind {
     NodeAdd,
@@ -17,20 +18,6 @@ enum Node {
     Number {
         val: u32,
     },
-}
-
-fn main() {
-    let args: Vec<String> = env::args().collect();
-    println!("args: {:?}", args);
-
-    if args.len() == 2 {
-        match generate_asm(&args[1]) {
-            Ok(_) => (),
-            Err(_) => println!("Failed!"),
-        };
-    } else {
-        println!("Invalid!");
-    }
 }
 
 fn new_node(kind: NodeKind, lhs: Box<Node>, rhs: Box<Node>) -> Box<Node> {
@@ -59,11 +46,11 @@ fn expr(formula: &str) -> Box<Node> {
         match formula.next() {
             Some(item) => {
                 if item == "+" {
-                    node = new_node(NodeKind::NodeAdd,
+                    node = new_node(NodeAdd,
                                     node,
                                     new_node_num(formula.next().unwrap().parse().unwrap()));
                 } else if item == "-" {
-                    node = new_node(NodeKind::NodeSub,
+                    node = new_node(NodeSub,
                                     node,
                                     new_node_num(formula.next().unwrap().parse().unwrap()));
                 }
@@ -74,27 +61,28 @@ fn expr(formula: &str) -> Box<Node> {
     node
 }
 
-fn gen(f: &mut File, node: Box<Node>) {
+fn assemble_node(f: &mut File, node: Box<Node>) -> std::io::Result<()> {
     match *node {
         Node::Number {val} => {
-            f.write_fmt(format_args!("    push {}\n", val)).unwrap()
+            f.write_fmt(format_args!("    push {}\n", val))?;
         },
         Node::Operator { kind, lhs, rhs} => {
-            gen(f, lhs);
-            gen(f, rhs);
-            f.write_fmt(format_args!("    pop rdi\n")).unwrap();
-            f.write_fmt(format_args!("    pop rax\n")).unwrap();
+            assemble_node(f, lhs)?;
+            assemble_node(f, rhs)?;
+            f.write_fmt(format_args!("    pop rdi\n"))?;
+            f.write_fmt(format_args!("    pop rax\n"))?;
             match kind {
-                NodeKind::NodeAdd => {
-                    f.write_fmt(format_args!("    add rax, rdi\n")).unwrap();
+                NodeAdd => {
+                    f.write_fmt(format_args!("    add rax, rdi\n"))?;
                 },
-                NodeKind::NodeSub => {
-                    f.write_fmt(format_args!("    sub rax, rdi\n")).unwrap();
+                NodeSub => {
+                    f.write_fmt(format_args!("    sub rax, rdi\n"))?;
                 },
             }
-            f.write_fmt(format_args!("    push rax\n")).unwrap()
+            f.write_fmt(format_args!("    push rax\n"))?;
         },
     }
+    Ok(())
 }
 
 fn generate_asm(formula: &str) -> std::io::Result<()> {
@@ -107,11 +95,25 @@ fn generate_asm(formula: &str) -> std::io::Result<()> {
     f.write_fmt(format_args!("main:\n"))?;
 
     let node = expr(formula);
-    gen(&mut f, node);
+    assemble_node(&mut f, node)?;
 
     f.write_fmt(format_args!("    pop rax\n"))?;
     f.write_fmt(format_args!("    ret\n"))?;
     Ok(())
+}
+
+fn main() {
+    let args: Vec<String> = env::args().collect();
+    println!("args: {:?}", args);
+
+    if args.len() == 2 {
+        match generate_asm(&args[1]) {
+            Ok(_) => (),
+            Err(_) => println!("Failed!"),
+        };
+    } else {
+        println!("Invalid!");
+    }
 }
 
 #[cfg(test)]
