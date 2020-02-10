@@ -47,23 +47,26 @@ fn new_node_num(val: u32) -> Box<Node> {
 }
 
 fn tokenize(formula: &str) -> Vec<Token> {
-    let mut formula = formula.split_whitespace();
     let mut v: Vec<Token> = Vec::new();
-    loop {
-        match formula.next() {
-            Some(item) => {
-                if item == "+" || item == "-" {
-                    v.push(TokenOp(item.to_string()));
-                } else {
-                    v.push(TokenNum(item.parse().expect("Cannot parse!")));
-                }
-            }
-            None => {
-                v.push(TokenEnd);
-                break v;
-            },
+    let mut num_tmp = String::new();
+    for c in formula.chars() {
+        if c.is_ascii_digit() {
+            num_tmp.push(c);
+        } else if !num_tmp.is_empty() {
+            v.push(TokenNum(num_tmp.parse().expect("Cannot parse!")));
+            num_tmp.clear();
+        }
+
+        if c == '+' || c == '-' {
+            v.push(TokenOp(c.to_string()));
         }
     }
+    if !num_tmp.is_empty() {
+        v.push(TokenNum(num_tmp.parse().expect("Cannot parse!")));
+        num_tmp.clear();
+    }
+    v.push(TokenEnd);
+    v
 }
 
 fn expect_num(v: &mut Vec<Token>) -> u32 {
@@ -189,7 +192,12 @@ mod tests {
     }
 
     #[test]
-    fn return_val_formula() {
-        return_val_num("123 + 23 - 6", 140);
+    fn return_val_formula_with_space() {
+        return_val_num(" 123 + 23 - 6 ", 140);
+    }
+
+    #[test]
+    fn return_val_formula_without_space() {
+        return_val_num("123+23-6", 140);
     }
 }
