@@ -3,6 +3,14 @@ use std::fs;
 use std::fs::File;
 use std::io::prelude::*;
 use NodeKind::*;
+use Token::*;
+
+#[derive(PartialEq)]
+enum Token {
+    TokenOp(String),
+    TokenNum(u32),
+    TokenEnd,
+}
 
 enum NodeKind {
     NodeAdd,
@@ -38,24 +46,61 @@ fn new_node_num(val: u32) -> Box<Node> {
     node
 }
 
-fn expr(formula: &str) -> Box<Node> {
+fn tokenize(formula: &str) -> Vec<Token> {
     let mut formula = formula.split_whitespace();
-
-    let mut node = new_node_num(formula.next().unwrap().parse().unwrap());
+    let mut v: Vec<Token> = Vec::new();
     loop {
         match formula.next() {
             Some(item) => {
-                if item == "+" {
-                    node = new_node(NodeAdd,
-                                    node,
-                                    new_node_num(formula.next().unwrap().parse().unwrap()));
-                } else if item == "-" {
-                    node = new_node(NodeSub,
-                                    node,
-                                    new_node_num(formula.next().unwrap().parse().unwrap()));
+                if item == "+" || item == "-" {
+                    v.push(TokenOp(item.to_string()));
+                } else {
+                    v.push(TokenNum(item.parse().expect("Cannot parse!")));
                 }
             }
-            None => break,
+            None => {
+                v.push(TokenEnd);
+                break v;
+            },
+        }
+    }
+}
+
+fn expect_num(v: &mut Vec<Token>) -> u32 {
+    let number: u32;
+    match &v[0] {
+        TokenNum(num) => number = *num,
+        _ => unreachable!(),
+    }
+    &v.remove(0);
+    number
+}
+
+fn expect_op(v: &mut Vec<Token>) -> String {
+    let operator: String;
+    match &v[0] {
+        TokenOp(op) => operator = op.to_string(),
+        _ => unreachable!(),
+    }
+    &v.remove(0);
+    operator
+}
+
+fn expr(v: &mut Vec<Token>) -> Box<Node> {
+    let mut node = new_node_num(expect_num(v));
+    while v[0] != TokenEnd {
+        match expect_op(v).as_str() {
+            "+" => {
+                node = new_node(NodeAdd,
+                                node,
+                                new_node_num(expect_num(v)));
+            },
+            "-" => {
+                node = new_node(NodeSub,
+                                node,
+                                new_node_num(expect_num(v)));
+            },
+            _ => unreachable!(),
         }
     }
     node
@@ -94,7 +139,8 @@ fn generate_asm(formula: &str) -> std::io::Result<()> {
     f.write_fmt(format_args!(".global main\n"))?;
     f.write_fmt(format_args!("main:\n"))?;
 
-    let node = expr(formula);
+    let mut v = tokenize(formula);
+    let node = expr(&mut v);
     assemble_node(&mut f, node)?;
 
     f.write_fmt(format_args!("    pop rax\n"))?;
