@@ -60,7 +60,8 @@ fn tokenize(formula: &str) -> Vec<Token> {
         }
 
         if c == '+' || c == '-' ||
-           c == '*' || c == '/' {
+           c == '*' || c == '/' ||
+           c == '(' || c == ')' {
             v.push(TokenOp(c.to_string()));
         }
     }
@@ -96,17 +97,29 @@ fn expect_op(v: &mut Vec<Token>, expect: &str) -> bool {
     }
 }
 
+fn primary(v: &mut Vec<Token>) -> Box<Node> {
+    let node: Box<Node>;
+    if expect_op(v, "(") {
+        node = expr(v);
+        expect_op(v, ")");
+        node
+    } else {
+        node = new_node_num(expect_num(v));
+        node
+    }
+}
+
 fn mul(v: &mut Vec<Token>) -> Box<Node> {
-    let mut node = new_node_num(expect_num(v));
+    let mut node = primary(v);
     while v[0] != TokenEnd {
         if expect_op(v, "*") {
             node = new_node(NodeMul,
                             node,
-                            new_node_num(expect_num(v)));
+                            primary(v));
         } else if expect_op(v, "/") {
             node = new_node(NodeDiv,
                             node,
-                            new_node_num(expect_num(v)));
+                            primary(v));
         } else {
             break;
         }
@@ -233,5 +246,10 @@ mod tests {
     #[test]
     fn return_val_formula_mul() {
         return_val_num("4 / 2 + 2 * 3", 8);
+    }
+
+    #[test]
+    fn return_val_formula_mul_with_paren() {
+        return_val_num("8 / (2 + 2) * 3", 6);
     }
 }
