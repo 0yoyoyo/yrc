@@ -15,6 +15,8 @@ enum Token {
 enum NodeKind {
     NodeAdd,
     NodeSub,
+    NodeMul,
+    NodeDiv,
 }
 
 enum Node {
@@ -57,7 +59,8 @@ fn tokenize(formula: &str) -> Vec<Token> {
             num_tmp.clear();
         }
 
-        if c == '+' || c == '-' {
+        if c == '+' || c == '-' ||
+           c == '*' || c == '/' {
             v.push(TokenOp(c.to_string()));
         }
     }
@@ -79,31 +82,51 @@ fn expect_num(v: &mut Vec<Token>) -> u32 {
     number
 }
 
-fn expect_op(v: &mut Vec<Token>) -> String {
-    let operator: String;
+fn expect_op(v: &mut Vec<Token>, expect: &str) -> bool {
     match &v[0] {
-        TokenOp(op) => operator = op.to_string(),
-        _ => unreachable!(),
+        TokenOp(op) => {
+            if op == expect {
+                &v.remove(0);
+                true
+            } else {
+                false
+            }
+        },
+        _ => false,
     }
-    &v.remove(0);
-    operator
+}
+
+fn mul(v: &mut Vec<Token>) -> Box<Node> {
+    let mut node = new_node_num(expect_num(v));
+    while v[0] != TokenEnd {
+        if expect_op(v, "*") {
+            node = new_node(NodeMul,
+                            node,
+                            new_node_num(expect_num(v)));
+        } else if expect_op(v, "/") {
+            node = new_node(NodeDiv,
+                            node,
+                            new_node_num(expect_num(v)));
+        } else {
+            break;
+        }
+    }
+    node
 }
 
 fn expr(v: &mut Vec<Token>) -> Box<Node> {
-    let mut node = new_node_num(expect_num(v));
+    let mut node = mul(v);
     while v[0] != TokenEnd {
-        match expect_op(v).as_str() {
-            "+" => {
-                node = new_node(NodeAdd,
-                                node,
-                                new_node_num(expect_num(v)));
-            },
-            "-" => {
-                node = new_node(NodeSub,
-                                node,
-                                new_node_num(expect_num(v)));
-            },
-            _ => unreachable!(),
+        if expect_op(v, "+") {
+            node = new_node(NodeAdd,
+                            node,
+                            mul(v));
+        } else if expect_op(v, "-") {
+            node = new_node(NodeSub,
+                            node,
+                            mul(v));
+        } else {
+            break;
         }
     }
     node
@@ -125,6 +148,13 @@ fn assemble_node(f: &mut File, node: Box<Node>) -> std::io::Result<()> {
                 },
                 NodeSub => {
                     f.write_fmt(format_args!("    sub rax, rdi\n"))?;
+                },
+                NodeMul => {
+                    f.write_fmt(format_args!("    imul rax, rdi\n"))?;
+                },
+                NodeDiv => {
+                    f.write_fmt(format_args!("    cqo\n"))?;
+                    f.write_fmt(format_args!("    idiv rdi\n"))?;
                 },
             }
             f.write_fmt(format_args!("    push rax\n"))?;
@@ -199,5 +229,10 @@ mod tests {
     #[test]
     fn return_val_formula_without_space() {
         return_val_num("123+23-6", 140);
+    }
+
+    #[test]
+    fn return_val_formula_mul() {
+        return_val_num("4 / 2 + 2 * 3", 8);
     }
 }
