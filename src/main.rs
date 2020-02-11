@@ -183,7 +183,6 @@ fn generate_asm(formula: &str) -> std::io::Result<()> {
 
 fn main() {
     let args: Vec<String> = env::args().collect();
-    println!("args: {:?}", args);
 
     if args.len() == 2 {
         match generate_asm(&args[1]) {
