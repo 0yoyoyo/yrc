@@ -55,7 +55,8 @@ fn tokenize(formula: &str) -> Vec<Token> {
         if c.is_ascii_digit() {
             num_tmp.push(c);
         } else if !num_tmp.is_empty() {
-            v.push(TokenNum(num_tmp.parse().expect("Cannot parse!")));
+            let num = num_tmp.parse().expect("Cannot parse!");
+            v.push(TokenNum(num));
             num_tmp.clear();
         }
 
@@ -66,7 +67,8 @@ fn tokenize(formula: &str) -> Vec<Token> {
         }
     }
     if !num_tmp.is_empty() {
-        v.push(TokenNum(num_tmp.parse().expect("Cannot parse!")));
+        let num = num_tmp.parse().expect("Cannot parse!");
+        v.push(TokenNum(num));
         num_tmp.clear();
     }
     v.push(TokenEnd);
@@ -113,13 +115,9 @@ fn mul(v: &mut Vec<Token>) -> Box<Node> {
     let mut node = primary(v);
     while v[0] != TokenEnd {
         if expect_op(v, "*") {
-            node = new_node(NodeMul,
-                            node,
-                            primary(v));
+            node = new_node(NodeMul, node, primary(v));
         } else if expect_op(v, "/") {
-            node = new_node(NodeDiv,
-                            node,
-                            primary(v));
+            node = new_node(NodeDiv, node, primary(v));
         } else {
             break;
         }
@@ -131,13 +129,9 @@ fn expr(v: &mut Vec<Token>) -> Box<Node> {
     let mut node = mul(v);
     while v[0] != TokenEnd {
         if expect_op(v, "+") {
-            node = new_node(NodeAdd,
-                            node,
-                            mul(v));
+            node = new_node(NodeAdd, node, mul(v));
         } else if expect_op(v, "-") {
-            node = new_node(NodeSub,
-                            node,
-                            mul(v));
+            node = new_node(NodeSub, node, mul(v));
         } else {
             break;
         }
