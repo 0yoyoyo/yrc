@@ -17,6 +17,10 @@ enum NodeKind {
     NodeSub,
     NodeMul,
     NodeDiv,
+    NodeEq,
+    NodeNe,
+    NodeGr,
+    NodeGe,
 }
 
 enum Node {
@@ -51,6 +55,7 @@ fn new_node_num(val: u32) -> Box<Node> {
 fn tokenize(formula: &str) -> Vec<Token> {
     let mut v: Vec<Token> = Vec::new();
     let mut num_tmp = String::new();
+    let mut op_tmp = String::new();
     for c in formula.chars() {
         if c.is_ascii_digit() {
             num_tmp.push(c);
@@ -62,8 +67,14 @@ fn tokenize(formula: &str) -> Vec<Token> {
 
         if c == '+' || c == '-' ||
            c == '*' || c == '/' ||
-           c == '(' || c == ')' {
-            v.push(TokenOp(c.to_string()));
+           c == '(' || c == ')' ||
+           c == '<' || c == '>' ||
+           c == '=' || c == '!' {
+            op_tmp.push(c);
+        } else if !op_tmp.is_empty() {
+            let op = op_tmp.to_string();
+            v.push(TokenOp(op));
+            op_tmp.clear();
         }
     }
     if !num_tmp.is_empty() {
@@ -135,7 +146,7 @@ fn mul(v: &mut Vec<Token>) -> Box<Node> {
     node
 }
 
-fn expr(v: &mut Vec<Token>) -> Box<Node> {
+fn add(v: &mut Vec<Token>) -> Box<Node> {
     let mut node = mul(v);
     while v[0] != TokenEnd {
         if expect_op(v, "+") {
@@ -146,6 +157,43 @@ fn expr(v: &mut Vec<Token>) -> Box<Node> {
             break;
         }
     }
+    node
+}
+
+fn relational(v: &mut Vec<Token>) -> Box<Node> {
+    let mut node = add(v);
+    while v[0] != TokenEnd {
+        if expect_op(v, "<") {
+            node = new_node(NodeGr, node, add(v));
+        } else if expect_op(v, "<=") {
+            node = new_node(NodeGe, node, add(v));
+        } else if expect_op(v, ">") {
+            node = new_node(NodeGr, add(v), node);
+        } else if expect_op(v, ">=") {
+            node = new_node(NodeGe, add(v), node);
+        } else {
+            break;
+        }
+    }
+    node
+}
+
+fn equality(v: &mut Vec<Token>) -> Box<Node> {
+    let mut node = relational(v);
+    while v[0] != TokenEnd {
+        if expect_op(v, "==") {
+            node = new_node(NodeEq, node, relational(v));
+        } else if expect_op(v, "!=") {
+            node = new_node(NodeNe, node, relational(v));
+        } else {
+            break;
+        }
+    }
+    node
+}
+
+fn expr(v: &mut Vec<Token>) -> Box<Node> {
+    let node = equality(v);
     node
 }
 
@@ -172,6 +220,26 @@ fn assemble_node(f: &mut File, node: Box<Node>) -> std::io::Result<()> {
                 NodeDiv => {
                     f.write_fmt(format_args!("    cqo\n"))?;
                     f.write_fmt(format_args!("    idiv rdi\n"))?;
+                },
+                NodeEq => {
+                    f.write_fmt(format_args!("    cmp rax, rdi\n"))?;
+                    f.write_fmt(format_args!("    sete al\n"))?;
+                    f.write_fmt(format_args!("    movzb rax, al\n"))?;
+                },
+                NodeNe => {
+                    f.write_fmt(format_args!("    cmp rax, rdi\n"))?;
+                    f.write_fmt(format_args!("    setne al\n"))?;
+                    f.write_fmt(format_args!("    movzb rax, al\n"))?;
+                },
+                NodeGr => {
+                    f.write_fmt(format_args!("    cmp rax, rdi\n"))?;
+                    f.write_fmt(format_args!("    setl al\n"))?;
+                    f.write_fmt(format_args!("    movzb rax, al\n"))?;
+                },
+                NodeGe => {
+                    f.write_fmt(format_args!("    cmp rax, rdi\n"))?;
+                    f.write_fmt(format_args!("    setle al\n"))?;
+                    f.write_fmt(format_args!("    movzb rax, al\n"))?;
                 },
             }
             f.write_fmt(format_args!("    push rax\n"))?;
@@ -260,5 +328,25 @@ mod tests {
     #[test]
     fn return_val_formula_with_unary() {
         return_val_num("-2 + 10", 8);
+    }
+
+    #[test]
+    fn return_val_formula_eq1() {
+        return_val_num("3 == 3", 1);
+    }
+
+    #[test]
+    fn return_val_formula_eq2() {
+        return_val_num("3 != 3", 0);
+    }
+
+    #[test]
+    fn return_val_formula_gr() {
+        return_val_num("3 > 2", 1);
+    }
+
+    #[test]
+    fn return_val_formula_ge() {
+        return_val_num("3 <= 2", 0);
     }
 }
