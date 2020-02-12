@@ -111,13 +111,23 @@ fn primary(v: &mut Vec<Token>) -> Box<Node> {
     }
 }
 
+fn unary(v: &mut Vec<Token>) -> Box<Node> {
+    let node: Box<Node>;
+    if expect_op(v, "-") {
+        node = new_node(NodeSub, new_node_num(0), primary(v));
+    } else {
+        node = primary(v);
+    }
+    node
+}
+
 fn mul(v: &mut Vec<Token>) -> Box<Node> {
-    let mut node = primary(v);
+    let mut node = unary(v);
     while v[0] != TokenEnd {
         if expect_op(v, "*") {
-            node = new_node(NodeMul, node, primary(v));
+            node = new_node(NodeMul, node, unary(v));
         } else if expect_op(v, "/") {
-            node = new_node(NodeDiv, node, primary(v));
+            node = new_node(NodeDiv, node, unary(v));
         } else {
             break;
         }
@@ -245,5 +255,10 @@ mod tests {
     #[test]
     fn return_val_formula_mul_with_paren() {
         return_val_num("8 / (2 + 2) * 3", 6);
+    }
+
+    #[test]
+    fn return_val_formula_with_unary() {
+        return_val_num("-2 + 10", 8);
     }
 }
