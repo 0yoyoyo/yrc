@@ -115,11 +115,10 @@ fn primary(v: &mut Vec<Token>) -> Box<Node> {
     if expect_op(v, "(") {
         node = expr(v);
         expect_op(v, ")");
-        node
     } else {
         node = new_node_num(expect_num(v));
-        node
     }
+    node
 }
 
 fn unary(v: &mut Vec<Token>) -> Box<Node> {
