@@ -289,15 +289,17 @@ mod tests {
     use super::*;
     use std::process::Command;
 
-    fn return_val_num(formula: &str, answer: u32) {
+    fn return_val_num(formula: &str, expect: u32) {
         assert_eq!((), generate_asm(formula).unwrap());
         let out = Command::new("bash")
                           .arg("-c")
                           .arg("script/test.sh")
                           .output()
                           .expect("Exec error!");
-        assert_eq!(format!("{}\n", answer),
-                   String::from_utf8(out.stdout).unwrap());
+        let answer = String::from_utf8(out.stdout).unwrap();
+        println!("{} -> {} (expected: {})",
+                 formula, answer, expect);
+        assert_eq!(format!("{}", expect), answer);
     }
 
     #[test]
