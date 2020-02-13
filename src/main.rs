@@ -295,57 +295,50 @@ mod tests {
     }
 
     #[test]
-    fn return_val_0() {
+    fn calc_unary() {
         return_val_num("0", 0);
-    }
-
-    #[test]
-    fn return_val_123() {
         return_val_num("123", 123);
+        //return_val_num("-123", -123);
+        return_val_num("(123)", 123);
+        //return_val_num("-(123)", -123);
     }
 
     #[test]
-    fn return_val_formula_with_space() {
-        return_val_num(" 123 + 23 - 6 ", 140);
+    fn calc_binary() {
+        return_val_num("1 + 2", 3);
+        return_val_num("3 - 2", 1);
+        return_val_num("2 * 3", 6);
+        return_val_num("6 / 2", 3);
+        return_val_num("7 == 7", 1);
+        return_val_num("7 == 8", 0);
+        return_val_num("7 != 7", 0);
+        return_val_num("7 != 8", 1);
+        return_val_num("7 < 8", 1);
+        return_val_num("7 <= 7", 1);
+        return_val_num("7 <= 8", 1);
+        return_val_num("7 < 7", 0);
+        return_val_num("7 <= 6", 0);
+        return_val_num("7 <= 6", 0);
+        return_val_num("8 > 7", 1);
+        return_val_num("7 >= 7", 1);
+        return_val_num("8 >= 7", 1);
+        return_val_num("7 > 7", 0);
+        return_val_num("6 >= 7", 0);
+        return_val_num("6 >= 7", 0);
     }
 
     #[test]
-    fn return_val_formula_without_space() {
-        return_val_num("123+23-6", 140);
+    fn calc_combination() {
+        return_val_num("-1 + 2", 1);
+        return_val_num("-(1 + 2) + 4", 1);
+        return_val_num("2 * 3 + 6 / 2", 9);
+        return_val_num("2 * (3 + 6) / 3", 6);
     }
 
     #[test]
-    fn return_val_formula_mul() {
-        return_val_num("4 / 2 + 2 * 3", 8);
-    }
-
-    #[test]
-    fn return_val_formula_mul_with_paren() {
-        return_val_num("8 / (2 + 2) * 3", 6);
-    }
-
-    #[test]
-    fn return_val_formula_with_unary() {
-        return_val_num("-2 + 10", 8);
-    }
-
-    #[test]
-    fn return_val_formula_eq1() {
-        return_val_num("3 == 3", 1);
-    }
-
-    #[test]
-    fn return_val_formula_eq2() {
-        return_val_num("3 != 3", 0);
-    }
-
-    #[test]
-    fn return_val_formula_gr() {
-        return_val_num("3 > 2", 1);
-    }
-
-    #[test]
-    fn return_val_formula_ge() {
-        return_val_num("3 <= 2", 0);
+    fn check_format() {
+        return_val_num("1+2+3", 6);
+        return_val_num(" 1 + 2 + 3 ", 6);
+        return_val_num("1 +  2   +    3", 6);
     }
 }
