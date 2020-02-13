@@ -67,10 +67,16 @@ fn tokenize(formula: &str) -> Vec<Token> {
 
         if c == '+' || c == '-' ||
            c == '*' || c == '/' ||
-           c == '(' || c == ')' ||
            c == '<' || c == '>' ||
            c == '=' || c == '!' {
             op_tmp.push(c);
+        } else if c == '(' || c == ')' {
+            if !op_tmp.is_empty() {
+                let op = op_tmp.to_string();
+                v.push(TokenOp(op));
+                op_tmp.clear();
+            }
+            v.push(TokenOp(c.to_string()));
         } else if !op_tmp.is_empty() {
             let op = op_tmp.to_string();
             v.push(TokenOp(op));
@@ -340,5 +346,8 @@ mod tests {
         return_val_num("1+2+3", 6);
         return_val_num(" 1 + 2 + 3 ", 6);
         return_val_num("1 +  2   +    3", 6);
+        return_val_num("(1+2)+3", 6);
+        return_val_num("1+(2+3)", 6);
+        return_val_num("(1+2+3)", 6);
     }
 }
