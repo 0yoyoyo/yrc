@@ -1,4 +1,5 @@
 use std::env;
+use std::str;
 use std::fs;
 use std::fs::File;
 use std::io::prelude::*;
@@ -54,44 +55,48 @@ fn new_node_num(val: u32) -> Box<Node> {
 
 fn tokenize(formula: &str) -> Vec<Token> {
     let mut v: Vec<Token> = Vec::new();
-    let mut num_tmp = String::new();
-    let mut op_tmp = String::new();
+    let mut num_tmp: Vec<u8> = Vec::new();
+    let mut op_tmp: Vec<u8> = Vec::new();
+    let mut index = 0;
+    let bytes = formula.as_bytes();
+    let len = bytes.len();
 
-    for c in formula.chars() {
-        if c.is_ascii_digit() {
-            num_tmp.push(c);
-        } else if !num_tmp.is_empty() {
-            let num = num_tmp.parse().expect("Cannot parse!");
-            v.push(TokenNum(num));
-            num_tmp.clear();
+    while index < len {
+        match bytes[index] {
+            b'0'..=b'9' => {
+                num_tmp.push(bytes[index]);
+                if (index + 1 < len && 
+                    !b"0123456789".contains(&bytes[index + 1])) ||
+                   index + 1 == len {
+                    let num = str::from_utf8(&num_tmp).unwrap()
+                              .parse().expect("Cannot parse!");
+                    v.push(TokenNum(num));
+                    num_tmp.clear();
+                }
+            },
+            b'+' | b'-' |
+            b'*' | b'/' |
+            b'(' | b')' => {
+                op_tmp.push(bytes[index]);
+                let op = str::from_utf8(&op_tmp).unwrap().to_string();
+                v.push(TokenOp(op));
+                op_tmp.clear();
+            },
+            b'<' | b'>' |
+            b'=' | b'!' => {
+                op_tmp.push(bytes[index]);
+                if (index + 1 < len && 
+                    !b"<>=!".contains(&bytes[index + 1])) ||
+                   index + 1 == len {
+                    let op = str::from_utf8(&op_tmp).unwrap().to_string();
+                    v.push(TokenOp(op));
+                    op_tmp.clear();
+                }
+            },
+            b' ' | b'\t'| b'\n' => (),
+            _ => println!("Cannot tokenize!"),
         }
-
-        if c == '+' || c == '-' ||
-           c == '*' || c == '/' ||
-           c == '(' || c == ')' {
-            v.push(TokenOp(c.to_string()));
-        }
-
-        if c == '<' || c == '>' ||
-           c == '=' || c == '!' {
-            op_tmp.push(c);
-        } else if !op_tmp.is_empty() {
-            let op = op_tmp.to_string();
-            v.push(TokenOp(op));
-            op_tmp.clear();
-        }
-    }
-
-    if !num_tmp.is_empty() {
-        let num = num_tmp.parse().expect("Cannot parse!");
-        v.push(TokenNum(num));
-        num_tmp.clear();
-    }
-
-    if !op_tmp.is_empty() {
-        let op = op_tmp.to_string();
-        v.push(TokenOp(op));
-        op_tmp.clear();
+        index += 1;
     }
 
     v.push(TokenEnd);
