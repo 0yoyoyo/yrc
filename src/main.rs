@@ -56,6 +56,7 @@ fn tokenize(formula: &str) -> Vec<Token> {
     let mut v: Vec<Token> = Vec::new();
     let mut num_tmp = String::new();
     let mut op_tmp = String::new();
+
     for c in formula.chars() {
         if c.is_ascii_digit() {
             num_tmp.push(c);
@@ -67,28 +68,34 @@ fn tokenize(formula: &str) -> Vec<Token> {
 
         if c == '+' || c == '-' ||
            c == '*' || c == '/' ||
-           c == '<' || c == '>' ||
+           c == '(' || c == ')' {
+            v.push(TokenOp(c.to_string()));
+        }
+
+        if c == '<' || c == '>' ||
            c == '=' || c == '!' {
             op_tmp.push(c);
-        } else if c == '(' || c == ')' {
-            if !op_tmp.is_empty() {
-                let op = op_tmp.to_string();
-                v.push(TokenOp(op));
-                op_tmp.clear();
-            }
-            v.push(TokenOp(c.to_string()));
         } else if !op_tmp.is_empty() {
             let op = op_tmp.to_string();
             v.push(TokenOp(op));
             op_tmp.clear();
         }
     }
+
     if !num_tmp.is_empty() {
         let num = num_tmp.parse().expect("Cannot parse!");
         v.push(TokenNum(num));
         num_tmp.clear();
     }
+
+    if !op_tmp.is_empty() {
+        let op = op_tmp.to_string();
+        v.push(TokenOp(op));
+        op_tmp.clear();
+    }
+
     v.push(TokenEnd);
+
     v
 }
 
