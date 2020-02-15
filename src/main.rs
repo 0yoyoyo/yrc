@@ -279,15 +279,21 @@ fn assemble_node(f: &mut File, node: Box<Node>) -> std::io::Result<()> {
     Ok(())
 }
 
-fn do_generate_asm(formula: &str) -> std::io::Result<()> {
+fn make_output_dir() -> std::io::Result<()> {
     match fs::create_dir("output") {
-        Ok(_) => (),
+        Ok(_) => Ok(()),
         Err(e) => {
-            if e.kind() != std::io::ErrorKind::AlreadyExists {
-                unimplemented!();
+            if e.kind() == std::io::ErrorKind::AlreadyExists {
+                Ok(())
+            } else {
+                Err(e)
             }
         },
-    };
+    }
+}
+
+fn do_generate_asm(formula: &str) -> std::io::Result<()> {
+    make_output_dir()?;
 
     let mut f = File::create("output/tmp.s")?;
     f.write_fmt(format_args!(".intel_syntax noprefix\n"))?;
