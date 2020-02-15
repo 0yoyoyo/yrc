@@ -281,8 +281,14 @@ fn assemble_node(f: &mut File, node: Box<Node>) -> std::io::Result<()> {
 
 fn do_generate_asm(formula: &str) -> std::io::Result<()> {
     match fs::create_dir("output") {
-        _ => (),
+        Ok(_) => (),
+        Err(e) => {
+            if e.kind() != std::io::ErrorKind::AlreadyExists {
+                unimplemented!();
+            }
+        },
     };
+
     let mut f = File::create("output/tmp.s")?;
     f.write_fmt(format_args!(".intel_syntax noprefix\n"))?;
     f.write_fmt(format_args!(".global main\n"))?;
