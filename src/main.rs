@@ -279,7 +279,7 @@ fn assemble_node(f: &mut File, node: Box<Node>) -> std::io::Result<()> {
     Ok(())
 }
 
-fn generate_asm(formula: &str) -> std::io::Result<()> {
+fn do_generate_asm(formula: &str) -> std::io::Result<()> {
     match fs::create_dir("output") {
         _ => (),
     };
@@ -297,16 +297,23 @@ fn generate_asm(formula: &str) -> std::io::Result<()> {
     Ok(())
 }
 
+fn generate_asm(formula: &str) -> std::result::Result<(), String> {
+    match do_generate_asm(formula) {
+        Ok(_) => Ok(()),
+        Err(_) => Err(format!("Cannot generate assembly code!")),
+    }
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
 
     if args.len() == 2 {
         match generate_asm(&args[1]) {
             Ok(_) => (),
-            Err(_) => println!("Failed!"),
+            Err(e) => println!("{}", e),
         };
     } else {
-        println!("Invalid!");
+        println!("Invalid number of arguments!");
     }
 }
 
@@ -316,7 +323,7 @@ mod tests {
     use std::process::Command;
 
     fn return_val_num(formula: &str, expect: u32) {
-        assert_eq!((), generate_asm(formula).unwrap());
+        assert_eq!(Ok(()), generate_asm(formula));
         let out = Command::new("bash")
                           .arg("-c")
                           .arg("script/test.sh")
