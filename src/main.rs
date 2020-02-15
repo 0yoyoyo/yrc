@@ -104,27 +104,41 @@ fn tokenize(formula: &str) -> Vec<Token> {
     v
 }
 
-fn expect_num(v: &mut Vec<Token>) -> u32 {
-    let number: u32;
-    match &v[0] {
-        TokenNum(num) => number = *num,
-        _ => unreachable!(),
+impl Token {
+    fn get_num(&self) -> std::option::Option<u32> {
+        match self {
+            TokenNum(num) => Some(*num),
+            _ => None,
+        }
     }
-    &v.remove(0);
-    number
+
+    fn get_op(&self) -> std::option::Option<&str> {
+        match self {
+            TokenOp(op) => Some(op),
+            _ => None,
+        }
+    }
+}
+
+fn expect_num(v: &mut Vec<Token>) -> u32 {
+    if let Some(num) = v[0].get_num() {
+        &v.remove(0);
+        num
+    } else {
+        unreachable!();
+    }
 }
 
 fn expect_op(v: &mut Vec<Token>, expect: &str) -> bool {
-    match &v[0] {
-        TokenOp(op) => {
-            if op == expect {
-                &v.remove(0);
-                true
-            } else {
-                false
-            }
-        },
-        _ => false,
+    if let Some(op) = v[0].get_op() {
+        if op == expect {
+            &v.remove(0);
+            true
+        } else {
+            false
+        }
+    } else {
+        false
     }
 }
 
