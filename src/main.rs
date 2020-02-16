@@ -53,7 +53,7 @@ fn new_node_num(val: u32) -> Box<Node> {
     node
 }
 
-fn tokenize(formula: &str) -> Vec<Token> {
+fn tokenize(formula: &str) -> Result<Vec<Token>, String> {
     let mut v: Vec<Token> = Vec::new();
     let mut num_tmp: Vec<u8> = Vec::new();
     let mut op_tmp: Vec<u8> = Vec::new();
@@ -94,14 +94,14 @@ fn tokenize(formula: &str) -> Vec<Token> {
                 }
             },
             b' ' | b'\t'| b'\n' => (),
-            _ => println!("Cannot tokenize!"),
+            _ => return Err(format!("Cannot tokenize!")),
         }
         index += 1;
     }
 
     v.push(TokenEnd);
 
-    v
+    Ok(v)
 }
 
 impl Token {
@@ -292,7 +292,7 @@ fn make_output_dir() -> std::io::Result<()> {
     }
 }
 
-fn do_generate_asm(formula: &str) -> std::io::Result<()> {
+fn do_generate_asm(v: &mut Vec<Token>) -> std::io::Result<()> {
     make_output_dir()?;
 
     let mut f = File::create("output/tmp.s")?;
@@ -300,8 +300,7 @@ fn do_generate_asm(formula: &str) -> std::io::Result<()> {
     f.write_fmt(format_args!(".global main\n"))?;
     f.write_fmt(format_args!("main:\n"))?;
 
-    let mut v = tokenize(formula);
-    let node = expr(&mut v);
+    let node = expr(v);
     assemble_node(&mut f, node)?;
 
     f.write_fmt(format_args!("    pop rax\n"))?;
@@ -310,7 +309,14 @@ fn do_generate_asm(formula: &str) -> std::io::Result<()> {
 }
 
 fn generate_asm(formula: &str) -> std::result::Result<(), String> {
-    match do_generate_asm(formula) {
+    let mut v: Vec<Token>;
+    match tokenize(formula) {
+        Ok(tokens) => {
+            v = tokens;
+        },
+        Err(e) => return Err(e),
+    }
+    match do_generate_asm(&mut v) {
         Ok(_) => Ok(()),
         Err(_) => Err(format!("Cannot generate assembly code!")),
     }
