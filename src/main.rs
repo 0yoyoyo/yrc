@@ -125,7 +125,8 @@ fn expect_num(v: &mut Vec<Token>) -> u32 {
         &v.remove(0);
         num
     } else {
-        unreachable!();
+        println!("Not a number!");
+        std::process::exit(1);
     }
 }
 
