@@ -14,6 +14,19 @@ use parse::Node;
 use parse::NodeKind;
 use parse::expr;
 
+fn make_output_dir() -> std::result::Result<(), String> {
+    match fs::create_dir("output") {
+        Ok(_) => Ok(()),
+        Err(e) => {
+            if e.kind() == std::io::ErrorKind::AlreadyExists {
+                Ok(())
+            } else {
+                Err(format!("Cannot create directory!"))
+            }
+        },
+    }
+}
+
 fn assemble_node(f: &mut File, node: Box<Node>) -> std::io::Result<()> {
     match *node {
         Node::Number {val} => {
@@ -62,48 +75,35 @@ fn assemble_node(f: &mut File, node: Box<Node>) -> std::io::Result<()> {
             f.write_fmt(format_args!("    push rax\n"))?;
         },
     }
+
     Ok(())
 }
 
-fn make_output_dir() -> std::io::Result<()> {
-    match fs::create_dir("output") {
-        Ok(_) => Ok(()),
-        Err(e) => {
-            if e.kind() == std::io::ErrorKind::AlreadyExists {
-                Ok(())
-            } else {
-                Err(e)
-            }
-        },
-    }
-}
-
-fn do_generate_asm(tokens: &mut Tokens) -> std::io::Result<()> {
-    make_output_dir()?;
-
+fn assemble(node: Box<Node>) -> std::io::Result<()> {
     let mut f = File::create("output/tmp.s")?;
+
     f.write_fmt(format_args!(".intel_syntax noprefix\n"))?;
     f.write_fmt(format_args!(".global main\n"))?;
     f.write_fmt(format_args!("main:\n"))?;
 
-    let node = expr(tokens);
-    // TODO: Check remaining tokens.
     assemble_node(&mut f, node)?;
 
     f.write_fmt(format_args!("    pop rax\n"))?;
     f.write_fmt(format_args!("    ret\n"))?;
+
     Ok(())
 }
 
 fn generate_asm(formula: &str) -> std::result::Result<(), String> {
-    let mut tokens: Tokens;
-    match tokenize(formula) {
-        Ok(token_list) => {
-            tokens = Tokens::new(token_list);
-        },
-        Err(e) => return Err(e),
-    }
-    match do_generate_asm(&mut tokens) {
+    make_output_dir()?;
+
+    let token_list = tokenize(formula)?;
+    let mut tokens = Tokens::new(token_list);
+
+    let node = expr(&mut tokens);
+    // TODO: Check remaining tokens.
+
+    match assemble(node) {
         Ok(_) => Ok(()),
         Err(_) => Err(format!("Cannot generate assembly code!")),
     }
