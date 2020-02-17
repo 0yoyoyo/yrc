@@ -87,6 +87,7 @@ fn do_generate_asm(tokens: &mut Tokens) -> std::io::Result<()> {
     f.write_fmt(format_args!("main:\n"))?;
 
     let node = expr(tokens);
+    // TODO: Check remaining tokens.
     assemble_node(&mut f, node)?;
 
     f.write_fmt(format_args!("    pop rax\n"))?;
