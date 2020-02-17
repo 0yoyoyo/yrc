@@ -35,6 +35,11 @@ enum Node {
     },
 }
 
+struct Tokens {
+    list: Vec<Token>,
+    current: usize,
+}
+
 fn new_node(kind: NodeKind, lhs: Box<Node>, rhs: Box<Node>) -> Box<Node> {
     let node = Node::Operator {
         kind: kind,
@@ -120,57 +125,73 @@ impl Token {
     }
 }
 
-fn expect_num(v: &mut Vec<Token>) -> u32 {
-    if let Some(num) = v[0].get_num() {
-        &v.remove(0);
-        num
-    } else {
-        println!("Not a number!");
-        std::process::exit(1);
+impl Tokens {
+    fn expect_num(&mut self) -> u32 {
+        if let Some(num) = self.list[self.current].get_num() {
+            self.current += 1;
+            num
+        } else {
+            println!("Not a number!");
+            std::process::exit(1);
+        }
     }
-}
 
-fn expect_op(v: &mut Vec<Token>, expect: &str) -> bool {
-    if let Some(op) = v[0].get_op() {
-        if op == expect {
-            &v.remove(0);
-            true
+    fn expect_op(&mut self, expect: &str) -> bool {
+        if let Some(op) = self.list[self.current].get_op() {
+            if op == expect {
+                self.current += 1;
+                true
+            } else {
+                false
+            }
         } else {
             false
         }
-    } else {
-        false
+    }
+
+    fn has_next(&self) -> bool {
+        match self.list[self.current] {
+            TokenEnd => false,
+            _ => true,
+        }
+    }
+
+    fn new(v: Vec<Token>) -> Tokens {
+        Tokens {
+            list: v,
+            current: 0,
+        }
     }
 }
 
-fn primary(v: &mut Vec<Token>) -> Box<Node> {
+fn primary(tokens: &mut Tokens) -> Box<Node> {
     let node: Box<Node>;
-    if expect_op(v, "(") {
-        node = expr(v);
-        expect_op(v, ")");
+    if tokens.expect_op("(") {
+        node = expr(tokens);
+        tokens.expect_op(")");
     } else {
-        node = new_node_num(expect_num(v));
+        node = new_node_num(tokens.expect_num());
     }
     node
 }
 
-fn unary(v: &mut Vec<Token>) -> Box<Node> {
+fn unary(tokens: &mut Tokens) -> Box<Node> {
     let node: Box<Node>;
-    if expect_op(v, "-") {
-        node = new_node(NodeSub, new_node_num(0), primary(v));
+    if tokens.expect_op("-") {
+        node = new_node(NodeSub, new_node_num(0), primary(tokens));
     } else {
-        node = primary(v);
+        node = primary(tokens);
     }
     node
 }
 
-fn mul(v: &mut Vec<Token>) -> Box<Node> {
-    let mut node = unary(v);
-    while v[0] != TokenEnd {
-        if expect_op(v, "*") {
-            node = new_node(NodeMul, node, unary(v));
-        } else if expect_op(v, "/") {
-            node = new_node(NodeDiv, node, unary(v));
+fn mul(tokens: &mut Tokens) -> Box<Node> {
+    let mut node = unary(tokens);
+    while tokens.has_next() {
+        if tokens.expect_op("*") {
+            node = new_node(NodeMul, node, unary(tokens));
+        } else if tokens.expect_op("/") {
+            node = new_node(NodeDiv, node, unary(tokens));
         } else {
             break;
         }
@@ -178,13 +199,13 @@ fn mul(v: &mut Vec<Token>) -> Box<Node> {
     node
 }
 
-fn add(v: &mut Vec<Token>) -> Box<Node> {
-    let mut node = mul(v);
-    while v[0] != TokenEnd {
-        if expect_op(v, "+") {
-            node = new_node(NodeAdd, node, mul(v));
-        } else if expect_op(v, "-") {
-            node = new_node(NodeSub, node, mul(v));
+fn add(tokens: &mut Tokens) -> Box<Node> {
+    let mut node = mul(tokens);
+    while tokens.has_next() {
+        if tokens.expect_op("+") {
+            node = new_node(NodeAdd, node, mul(tokens));
+        } else if tokens.expect_op("-") {
+            node = new_node(NodeSub, node, mul(tokens));
         } else {
             break;
         }
@@ -192,17 +213,17 @@ fn add(v: &mut Vec<Token>) -> Box<Node> {
     node
 }
 
-fn relational(v: &mut Vec<Token>) -> Box<Node> {
-    let mut node = add(v);
-    while v[0] != TokenEnd {
-        if expect_op(v, "<") {
-            node = new_node(NodeGr, node, add(v));
-        } else if expect_op(v, "<=") {
-            node = new_node(NodeGe, node, add(v));
-        } else if expect_op(v, ">") {
-            node = new_node(NodeGr, add(v), node);
-        } else if expect_op(v, ">=") {
-            node = new_node(NodeGe, add(v), node);
+fn relational(tokens: &mut Tokens) -> Box<Node> {
+    let mut node = add(tokens);
+    while tokens.has_next() {
+        if tokens.expect_op("<") {
+            node = new_node(NodeGr, node, add(tokens));
+        } else if tokens.expect_op("<=") {
+            node = new_node(NodeGe, node, add(tokens));
+        } else if tokens.expect_op(">") {
+            node = new_node(NodeGr, add(tokens), node);
+        } else if tokens.expect_op(">=") {
+            node = new_node(NodeGe, add(tokens), node);
         } else {
             break;
         }
@@ -210,13 +231,13 @@ fn relational(v: &mut Vec<Token>) -> Box<Node> {
     node
 }
 
-fn equality(v: &mut Vec<Token>) -> Box<Node> {
-    let mut node = relational(v);
-    while v[0] != TokenEnd {
-        if expect_op(v, "==") {
-            node = new_node(NodeEq, node, relational(v));
-        } else if expect_op(v, "!=") {
-            node = new_node(NodeNe, node, relational(v));
+fn equality(tokens: &mut Tokens) -> Box<Node> {
+    let mut node = relational(tokens);
+    while tokens.has_next() {
+        if tokens.expect_op("==") {
+            node = new_node(NodeEq, node, relational(tokens));
+        } else if tokens.expect_op("!=") {
+            node = new_node(NodeNe, node, relational(tokens));
         } else {
             break;
         }
@@ -224,8 +245,8 @@ fn equality(v: &mut Vec<Token>) -> Box<Node> {
     node
 }
 
-fn expr(v: &mut Vec<Token>) -> Box<Node> {
-    let node = equality(v);
+fn expr(tokens: &mut Tokens) -> Box<Node> {
+    let node = equality(tokens);
     node
 }
 
@@ -293,7 +314,7 @@ fn make_output_dir() -> std::io::Result<()> {
     }
 }
 
-fn do_generate_asm(v: &mut Vec<Token>) -> std::io::Result<()> {
+fn do_generate_asm(tokens: &mut Tokens) -> std::io::Result<()> {
     make_output_dir()?;
 
     let mut f = File::create("output/tmp.s")?;
@@ -301,7 +322,7 @@ fn do_generate_asm(v: &mut Vec<Token>) -> std::io::Result<()> {
     f.write_fmt(format_args!(".global main\n"))?;
     f.write_fmt(format_args!("main:\n"))?;
 
-    let node = expr(v);
+    let node = expr(tokens);
     assemble_node(&mut f, node)?;
 
     f.write_fmt(format_args!("    pop rax\n"))?;
@@ -310,14 +331,14 @@ fn do_generate_asm(v: &mut Vec<Token>) -> std::io::Result<()> {
 }
 
 fn generate_asm(formula: &str) -> std::result::Result<(), String> {
-    let mut v: Vec<Token>;
+    let mut tokens: Tokens;
     match tokenize(formula) {
-        Ok(tokens) => {
-            v = tokens;
+        Ok(token_list) => {
+            tokens = Tokens::new(token_list);
         },
         Err(e) => return Err(e),
     }
-    match do_generate_asm(&mut v) {
+    match do_generate_asm(&mut tokens) {
         Ok(_) => Ok(()),
         Err(_) => Err(format!("Cannot generate assembly code!")),
     }
