@@ -60,8 +60,8 @@ impl Tokens {
         }
     }
 
-    pub fn new(v: Vec<Token>) -> Tokens {
-        Tokens {
+    pub fn new(v: Vec<Token>) -> Self {
+        Self {
             list: v,
             current: 0,
         }
