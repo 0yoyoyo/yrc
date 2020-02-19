@@ -113,6 +113,7 @@ fn main() {
     let args: Vec<String> = env::args().collect();
 
     if args.len() == 2 {
+        println!("{}", args[1]);
         match generate_asm(&args[1]) {
             Ok(_) => (),
             Err(e) => println!("{}", e),
