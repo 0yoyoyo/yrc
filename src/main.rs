@@ -79,14 +79,12 @@ fn assemble_node(f: &mut File, node: Box<Node>) -> std::io::Result<()> {
     Ok(())
 }
 
-fn assemble(node: Box<Node>) -> std::io::Result<()> {
-    let mut f = File::create("output/tmp.s")?;
-
+fn assemble(f: &mut File, node: Box<Node>) -> std::io::Result<()> {
     f.write_fmt(format_args!(".intel_syntax noprefix\n"))?;
     f.write_fmt(format_args!(".global main\n"))?;
     f.write_fmt(format_args!("main:\n"))?;
 
-    assemble_node(&mut f, node)?;
+    assemble_node(f, node)?;
 
     f.write_fmt(format_args!("    pop rax\n"))?;
     f.write_fmt(format_args!("    ret\n"))?;
@@ -95,8 +93,6 @@ fn assemble(node: Box<Node>) -> std::io::Result<()> {
 }
 
 fn generate_asm(formula: &str) -> std::result::Result<(), String> {
-    make_output_dir()?;
-
     let token_list = tokenize(formula)?;
     let mut tokens = Tokens::new(token_list);
 
@@ -105,7 +101,11 @@ fn generate_asm(formula: &str) -> std::result::Result<(), String> {
         return Err(format!("Redundant numbers!"));
     }
 
-    match assemble(node) {
+    make_output_dir()?;
+    let mut f = File::create("output/tmp.s")
+        .map_err(|_| format!("Cannot create file"))?;
+
+    match assemble(&mut f, node) {
         Ok(_) => Ok(()),
         Err(_) => Err(format!("Cannot generate assembly code!")),
     }
