@@ -101,7 +101,9 @@ fn generate_asm(formula: &str) -> std::result::Result<(), String> {
     let mut tokens = Tokens::new(token_list);
 
     let node = expr(&mut tokens);
-    // TODO: Check remaining tokens.
+    if tokens.has_next() {
+        return Err(format!("Redundant numbers!"));
+    }
 
     match assemble(node) {
         Ok(_) => Ok(()),
