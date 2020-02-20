@@ -5,6 +5,7 @@ use TokenKind::*;
 pub enum TokenKind {
     TokenOp(String),
     TokenNum(u32),
+    TokenVar(String),
     TokenEnd,
 }
 
@@ -130,6 +131,10 @@ pub fn tokenize(formula: &str) -> Result<Vec<Token>, String> {
                     op_tmp.clear();
                     pos = 0;
                 }
+            },
+            b'a'..=b'z' => {
+                let var = str::from_utf8(&bytes[index].to_be_bytes()).unwrap().to_string();
+                v.push(Token { kind: TokenVar(var), pos: index});
             },
             b' ' | b'\t'| b'\n' => (),
             _ => return Err(format!("Cannot tokenize!")),
