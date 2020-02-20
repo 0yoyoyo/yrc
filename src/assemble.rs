@@ -51,6 +51,9 @@ fn assemble_node(f: &mut File, node: Box<Node>) -> std::io::Result<()> {
             }
             f.write_fmt(format_args!("    push rax\n"))?;
         },
+        Node::LocalVariable { offset } => {
+            ()
+        },
     }
 
     Ok(())

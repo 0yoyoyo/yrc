@@ -22,6 +22,9 @@ pub enum Node {
     Number {
         val: u32,
     },
+    LocalVariable {
+        offset: usize,
+    },
 }
 
 fn new_node(kind: NodeKind, lhs: Box<Node>, rhs: Box<Node>) -> Box<Node> {
@@ -123,7 +126,31 @@ fn equality(tokens: &mut Tokens) -> Box<Node> {
     node
 }
 
-pub fn expr(tokens: &mut Tokens) -> Box<Node> {
-    let node = equality(tokens);
+pub fn assign(tokens: &mut Tokens) -> Box<Node> {
+    let mut node = equality(tokens);
+    if tokens.expect_op("=") {
+        node = assign(tokens);
+    }
     node
+}
+
+pub fn expr(tokens: &mut Tokens) -> Box<Node> {
+    let node = assign(tokens);
+    node
+}
+
+pub fn stmt(tokens: &mut Tokens) -> Box<Node> {
+    let node = expr(tokens);
+    tokens.expect_op(";");
+    // Need error check
+    node
+}
+
+pub fn program(tokens: &mut Tokens) -> () {
+    let mut nodes: Vec<Box<Node>> = Vec::new();
+    let mut node: Box<Node>;
+    while tokens.has_next() {
+        node = stmt(tokens);
+        nodes.push(node);
+    }
 }
