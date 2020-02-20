@@ -1,9 +1,8 @@
 use std::fs::File;
 use std::io::prelude::*;
 
-use NodeKind::*;
 use crate::parse::Node;
-use crate::parse::NodeKind;
+use crate::parse::NodeKind::*;
 
 fn assemble_node(f: &mut File, node: Box<Node>) -> std::io::Result<()> {
     match *node {

@@ -1,5 +1,6 @@
-use NodeKind::*;
 use crate::token::Tokens;
+
+use NodeKind::*;
 
 pub enum NodeKind {
     NodeAdd,
