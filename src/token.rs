@@ -108,7 +108,8 @@ pub fn tokenize(formula: &str) -> Result<Vec<Token>, String> {
             },
             b'+' | b'-' |
             b'*' | b'/' |
-            b'(' | b')' => {
+            b'(' | b')' |
+            b';' => {
                 let op = str::from_utf8(&bytes[index].to_be_bytes()).unwrap().to_string();
                 v.push(Token { kind: TokenOp(op), pos: index});
             },
