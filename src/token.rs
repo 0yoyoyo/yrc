@@ -30,6 +30,13 @@ impl Token {
         }
     }
 
+    fn get_var(&self) -> std::option::Option<&str> {
+        match &self.kind {
+            TokenVar(var) => Some(&var),
+            _ => None,
+        }
+    }
+
     fn get_pos(&self) -> usize {
         self.pos
     }
@@ -63,6 +70,10 @@ impl Tokens {
         } else {
             false
         }
+    }
+
+    pub fn expect_var(&mut self) -> std::option::Option<&str> {
+        self.list[self.current].get_var()
     }
 
     pub fn has_next(&self) -> bool {

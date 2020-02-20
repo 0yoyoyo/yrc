@@ -11,6 +11,7 @@ pub enum NodeKind {
     NodeNe,
     NodeGr,
     NodeGe,
+    NodeAsn,
 }
 
 pub enum Node {
@@ -45,11 +46,21 @@ fn new_node_num(val: u32) -> Box<Node> {
     node
 }
 
+fn new_node_var(var: &str) -> Box<Node> {
+    let node = Node::LocalVariable {
+        offset: ((var.parse::<u8>().unwrap() - b'a' + 1) * 8) as usize,
+    };
+    let node = Box::new(node);
+    node
+}
+
 fn primary(tokens: &mut Tokens) -> Box<Node> {
     let node: Box<Node>;
     if tokens.expect_op("(") {
         node = expr(tokens);
         tokens.expect_op(")");
+    } else if let Some(var) = tokens.expect_var() {
+        node = new_node_var(var);
     } else {
         node = new_node_num(tokens.expect_num());
     }
@@ -129,7 +140,7 @@ fn equality(tokens: &mut Tokens) -> Box<Node> {
 pub fn assign(tokens: &mut Tokens) -> Box<Node> {
     let mut node = equality(tokens);
     if tokens.expect_op("=") {
-        node = assign(tokens);
+        node = new_node(NodeAsn, node, assign(tokens));
     }
     node
 }

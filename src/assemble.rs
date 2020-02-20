@@ -48,6 +48,9 @@ fn assemble_node(f: &mut File, node: Box<Node>) -> std::io::Result<()> {
                     f.write_fmt(format_args!("    setle al\n"))?;
                     f.write_fmt(format_args!("    movzb rax, al\n"))?;
                 },
+                NodeAsn => {
+                    ();
+                },
             }
             f.write_fmt(format_args!("    push rax\n"))?;
         },
