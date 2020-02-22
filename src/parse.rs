@@ -11,7 +11,6 @@ pub enum NodeKind {
     NodeNe,
     NodeGr,
     NodeGe,
-    NodeAsn,
 }
 
 pub enum Node {
@@ -23,6 +22,10 @@ pub enum Node {
     Number {
         val: u32,
     },
+    Assignment {
+        lhs: Box<Node>,
+        rhs: Box<Node>,
+    },
     LocalVariable {
         offset: usize,
     },
@@ -31,6 +34,15 @@ pub enum Node {
 fn new_node(kind: NodeKind, lhs: Box<Node>, rhs: Box<Node>) -> Box<Node> {
     let node = Node::Operator {
         kind: kind,
+        lhs: lhs,
+        rhs: rhs,
+    };
+    let node = Box::new(node);
+    node
+}
+
+fn new_node_asn(lhs: Box<Node>, rhs: Box<Node>) -> Box<Node> {
+    let node = Node::Assignment {
         lhs: lhs,
         rhs: rhs,
     };
@@ -48,7 +60,7 @@ fn new_node_num(val: u32) -> Box<Node> {
 
 fn new_node_var(var: &str) -> Box<Node> {
     let node = Node::LocalVariable {
-        offset: ((var.parse::<u8>().unwrap() - b'a' + 1) * 8) as usize,
+        offset: ((var.as_bytes()[0] - b'a' + 1) * 8) as usize,
     };
     let node = Box::new(node);
     node
@@ -137,31 +149,32 @@ fn equality(tokens: &mut Tokens) -> Box<Node> {
     node
 }
 
-pub fn assign(tokens: &mut Tokens) -> Box<Node> {
+fn assign(tokens: &mut Tokens) -> Box<Node> {
     let mut node = equality(tokens);
     if tokens.expect_op("=") {
-        node = new_node(NodeAsn, node, assign(tokens));
+        node = new_node_asn(node, assign(tokens));
     }
     node
 }
 
-pub fn expr(tokens: &mut Tokens) -> Box<Node> {
+fn expr(tokens: &mut Tokens) -> Box<Node> {
     let node = assign(tokens);
     node
 }
 
-pub fn stmt(tokens: &mut Tokens) -> Box<Node> {
+fn stmt(tokens: &mut Tokens) -> Box<Node> {
     let node = expr(tokens);
     tokens.expect_op(";");
     // Need error check
     node
 }
 
-pub fn program(tokens: &mut Tokens) -> () {
+pub fn program(tokens: &mut Tokens) -> Vec<Box<Node>> {
     let mut nodes: Vec<Box<Node>> = Vec::new();
     let mut node: Box<Node>;
     while tokens.has_next() {
         node = stmt(tokens);
         nodes.push(node);
     }
+    nodes
 }

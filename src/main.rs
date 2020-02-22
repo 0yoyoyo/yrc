@@ -9,7 +9,7 @@ use std::fs::File;
 
 use token::tokenize;
 use token::Tokens;
-use parse::expr;
+use parse::program;
 use assemble::assemble;
 
 fn make_output_dir() -> std::result::Result<(), String> {
@@ -29,16 +29,16 @@ fn generate_asm(formula: &str) -> std::result::Result<(), String> {
     let token_list = tokenize(formula)?;
     let mut tokens = Tokens::new(token_list);
 
-    let node = expr(&mut tokens);
-    if tokens.has_next() {
-        return Err(format!("Redundant numbers!"));
-    }
+    let nodes = program(&mut tokens);
+    //if tokens.has_next() {
+    //    return Err(format!("Redundant numbers!"));
+    //}
 
     make_output_dir()?;
     let mut f = File::create("output/tmp.s")
         .map_err(|_| format!("Cannot create file"))?;
 
-    match assemble(&mut f, node) {
+    match assemble(&mut f, nodes) {
         Ok(_) => Ok(()),
         Err(_) => Err(format!("Cannot generate assembly code!")),
     }

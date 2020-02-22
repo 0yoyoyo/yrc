@@ -73,7 +73,12 @@ impl Tokens {
     }
 
     pub fn expect_var(&mut self) -> std::option::Option<&str> {
-        self.list[self.current].get_var()
+        if let Some(var) = self.list[self.current].get_var() {
+            self.current += 1;
+            Some(var)
+        } else {
+            None
+        }
     }
 
     pub fn has_next(&self) -> bool {
