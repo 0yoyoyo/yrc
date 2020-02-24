@@ -151,19 +151,19 @@ fn expr(tokens: &mut Tokens) -> Box<Node> {
     node
 }
 
-fn stmt(tokens: &mut Tokens) -> Box<Node> {
+fn stmt(tokens: &mut Tokens) -> Result<Box<Node>, String> {
     let node = expr(tokens);
-    tokens.expect_op(";");
-    // Need error check
-    node
+    if tokens.expect_op(";") {
+        Ok(node)
+    } else {
+        Err(format!("Cannot find semicolon!"))
+    }
 }
 
-pub fn program(tokens: &mut Tokens) -> Vec<Box<Node>> {
+pub fn program(tokens: &mut Tokens) -> Result<Vec<Box<Node>>, String> {
     let mut nodes: Vec<Box<Node>> = Vec::new();
-    let mut node: Box<Node>;
     while tokens.has_next() {
-        node = stmt(tokens);
-        nodes.push(node);
+        stmt(tokens).map(|node| nodes.push(node))?;
     }
-    nodes
+    Ok(nodes)
 }

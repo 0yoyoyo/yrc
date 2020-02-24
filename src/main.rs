@@ -29,10 +29,7 @@ fn generate_asm(formula: &str) -> Result<(), String> {
     let token_list = tokenize(formula)?;
     let mut tokens = Tokens::new(token_list);
 
-    let nodes = program(&mut tokens);
-    //if tokens.has_next() {
-    //    return Err(format!("Redundant numbers!"));
-    //}
+    let nodes = program(&mut tokens)?;
 
     make_output_dir()?;
     let mut f = File::create("output/tmp.s")
