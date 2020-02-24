@@ -18,10 +18,10 @@ fn assemble_lval(f: &mut File, node: Box<Node>) -> std::io::Result<()> {
 
 fn assemble_node(f: &mut File, node: Box<Node>) -> std::io::Result<()> {
     match *node {
-        Node::Number {val} => {
+        Node::Number { val } => {
             f.write_fmt(format_args!("    push {}\n", val))?;
         },
-        Node::Operator { kind, lhs, rhs} => {
+        Node::Operator { kind, lhs, rhs } => {
             assemble_node(f, lhs)?;
             assemble_node(f, rhs)?;
             f.write_fmt(format_args!("    pop rdi\n"))?;
