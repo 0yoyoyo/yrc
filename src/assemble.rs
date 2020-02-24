@@ -34,7 +34,11 @@ fn assemble_node(f: &mut File, node: Box<Node>) -> Result<(), AsmError> {
             f.write_fmt(format_args!("    push {}\n", val))?;
         },
         Node::Operator { kind, lhs, rhs } => {
-            assemble_node(f, lhs)?;
+            if kind == NodeAsn {
+                assemble_lval(f, lhs)?;
+            } else {
+                assemble_node(f, lhs)?;
+            }
             assemble_node(f, rhs)?;
             f.write_fmt(format_args!("    pop rdi\n"))?;
             f.write_fmt(format_args!("    pop rax\n"))?;
@@ -72,6 +76,10 @@ fn assemble_node(f: &mut File, node: Box<Node>) -> Result<(), AsmError> {
                     f.write_fmt(format_args!("    setle al\n"))?;
                     f.write_fmt(format_args!("    movzb rax, al\n"))?;
                 },
+                NodeAsn => {
+                    f.write_fmt(format_args!("    mov [rax], rdi\n"))?;
+                    f.write_fmt(format_args!("    push rdi\n"))?;
+                },
             }
             f.write_fmt(format_args!("    push rax\n"))?;
         },
@@ -81,14 +89,6 @@ fn assemble_node(f: &mut File, node: Box<Node>) -> Result<(), AsmError> {
             f.write_fmt(format_args!("    mov rax, [rax]\n"))?;
             f.write_fmt(format_args!("    push rax\n"))?;
         },
-        Node::Assignment { lhs, rhs } => {
-            assemble_lval(f, lhs)?;
-            assemble_node(f, rhs)?;
-            f.write_fmt(format_args!("    pop rdi\n"))?;
-            f.write_fmt(format_args!("    pop rax\n"))?;
-            f.write_fmt(format_args!("    mov [rax], rdi\n"))?;
-            f.write_fmt(format_args!("    push rdi\n"))?;
-        }
     }
 
     Ok(())

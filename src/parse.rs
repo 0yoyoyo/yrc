@@ -2,6 +2,7 @@ use crate::token::Tokens;
 
 use NodeKind::*;
 
+#[derive(PartialEq)]
 pub enum NodeKind {
     NodeAdd,
     NodeSub,
@@ -11,6 +12,7 @@ pub enum NodeKind {
     NodeNe,
     NodeGr,
     NodeGe,
+    NodeAsn,
 }
 
 pub enum Node {
@@ -22,10 +24,6 @@ pub enum Node {
     Number {
         val: u32,
     },
-    Assignment {
-        lhs: Box<Node>,
-        rhs: Box<Node>,
-    },
     LocalVariable {
         offset: usize,
     },
@@ -34,15 +32,6 @@ pub enum Node {
 fn new_node(kind: NodeKind, lhs: Box<Node>, rhs: Box<Node>) -> Box<Node> {
     let node = Node::Operator {
         kind: kind,
-        lhs: lhs,
-        rhs: rhs,
-    };
-    let node = Box::new(node);
-    node
-}
-
-fn new_node_asn(lhs: Box<Node>, rhs: Box<Node>) -> Box<Node> {
-    let node = Node::Assignment {
         lhs: lhs,
         rhs: rhs,
     };
@@ -152,7 +141,7 @@ fn equality(tokens: &mut Tokens) -> Box<Node> {
 fn assign(tokens: &mut Tokens) -> Box<Node> {
     let mut node = equality(tokens);
     if tokens.expect_op("=") {
-        node = new_node_asn(node, assign(tokens));
+        node = new_node(NodeAsn, node, assign(tokens));
     }
     node
 }
