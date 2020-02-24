@@ -75,52 +75,52 @@ mod tests {
 
     #[test]
     fn calc_unary() {
-        return_val_num("0", 0);
-        return_val_num("123", 123);
-        //return_val_num("-123", -123);
-        return_val_num("(123)", 123);
-        //return_val_num("-(123)", -123);
+        return_val_num("0;", 0);
+        return_val_num("123;", 123);
+        //return_val_num("-123;", -123);
+        return_val_num("(123);", 123);
+        //return_val_num("-(123);", -123);
     }
 
     #[test]
     fn calc_binary() {
-        return_val_num("1 + 2", 3);
-        return_val_num("3 - 2", 1);
-        return_val_num("2 * 3", 6);
-        return_val_num("6 / 2", 3);
-        return_val_num("7 == 7", 1);
-        return_val_num("7 == 8", 0);
-        return_val_num("7 != 7", 0);
-        return_val_num("7 != 8", 1);
-        return_val_num("7 < 8", 1);
-        return_val_num("7 <= 7", 1);
-        return_val_num("7 <= 8", 1);
-        return_val_num("7 < 7", 0);
-        return_val_num("7 <= 6", 0);
-        return_val_num("7 <= 6", 0);
-        return_val_num("8 > 7", 1);
-        return_val_num("7 >= 7", 1);
-        return_val_num("8 >= 7", 1);
-        return_val_num("7 > 7", 0);
-        return_val_num("6 >= 7", 0);
-        return_val_num("6 >= 7", 0);
+        return_val_num("1 + 2;", 3);
+        return_val_num("3 - 2;", 1);
+        return_val_num("2 * 3;", 6);
+        return_val_num("6 / 2;", 3);
+        return_val_num("7 == 7;", 1);
+        return_val_num("7 == 8;", 0);
+        return_val_num("7 != 7;", 0);
+        return_val_num("7 != 8;", 1);
+        return_val_num("7 < 8;", 1);
+        return_val_num("7 <= 7;", 1);
+        return_val_num("7 <= 8;", 1);
+        return_val_num("7 < 7;", 0);
+        return_val_num("7 <= 6;", 0);
+        return_val_num("7 <= 6;", 0);
+        return_val_num("8 > 7;", 1);
+        return_val_num("7 >= 7;", 1);
+        return_val_num("8 >= 7;", 1);
+        return_val_num("7 > 7;", 0);
+        return_val_num("6 >= 7;", 0);
+        return_val_num("6 >= 7;", 0);
     }
 
     #[test]
     fn calc_combination() {
-        return_val_num("-1 + 2", 1);
-        return_val_num("-(1 + 2) + 4", 1);
-        return_val_num("2 * 3 + 6 / 2", 9);
-        return_val_num("2 * (3 + 6) / 3", 6);
+        return_val_num("-1 + 2;", 1);
+        return_val_num("-(1 + 2) + 4;", 1);
+        return_val_num("2 * 3 + 6 / 2;", 9);
+        return_val_num("2 * (3 + 6) / 3;", 6);
     }
 
     #[test]
     fn check_format() {
-        return_val_num("1+2+3", 6);
-        return_val_num(" 1 + 2 + 3 ", 6);
-        return_val_num("1 +  2   +    3", 6);
-        return_val_num("(1+2)+3", 6);
-        return_val_num("1+(2+3)", 6);
-        return_val_num("(1+2+3)", 6);
+        return_val_num("1+2+3;", 6);
+        return_val_num(" 1 + 2 + 3 ;", 6);
+        return_val_num("1 +  2   +    3;", 6);
+        return_val_num("(1+2)+3;", 6);
+        return_val_num("1+(2+3);", 6);
+        return_val_num("(1+2+3);", 6);
     }
 }
