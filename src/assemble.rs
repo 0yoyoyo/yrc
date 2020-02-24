@@ -4,19 +4,31 @@ use std::io::prelude::*;
 use crate::parse::Node;
 use crate::parse::NodeKind::*;
 
-fn assemble_lval(f: &mut File, node: Box<Node>) -> std::io::Result<()> {
+#[derive(Debug)]
+pub enum AsmError {
+    Io(std::io::Error),
+    Context(String),
+}
+
+impl From<std::io::Error> for AsmError {
+    fn from(e: std::io::Error) -> Self {
+        AsmError::Io(e)
+    }
+}
+
+fn assemble_lval(f: &mut File, node: Box<Node>) -> Result<(), AsmError> {
     match *node {
         Node::LocalVariable { offset } => {
             f.write_fmt(format_args!("    mov rax, rbp\n"))?;
             f.write_fmt(format_args!("    sub rax, {}\n", offset))?;
             f.write_fmt(format_args!("    push rax\n"))?;
+            Ok(())
         },
-        _ => unimplemented!(),
+        _ => Err(AsmError::Context(format!("Lvalue is invalid!"))),
     }
-    Ok(())
 }
 
-fn assemble_node(f: &mut File, node: Box<Node>) -> std::io::Result<()> {
+fn assemble_node(f: &mut File, node: Box<Node>) -> Result<(), AsmError> {
     match *node {
         Node::Number { val } => {
             f.write_fmt(format_args!("    push {}\n", val))?;
@@ -82,7 +94,7 @@ fn assemble_node(f: &mut File, node: Box<Node>) -> std::io::Result<()> {
     Ok(())
 }
 
-pub fn assemble(f: &mut File, nodes: Vec<Box<Node>>) -> std::io::Result<()> {
+pub fn assemble(f: &mut File, nodes: Vec<Box<Node>>) -> Result<(), AsmError> {
     f.write_fmt(format_args!(".intel_syntax noprefix\n"))?;
     f.write_fmt(format_args!(".global main\n"))?;
     f.write_fmt(format_args!("main:\n"))?;

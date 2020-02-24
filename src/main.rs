@@ -12,7 +12,7 @@ use token::Tokens;
 use parse::program;
 use assemble::assemble;
 
-fn make_output_dir() -> std::result::Result<(), String> {
+fn make_output_dir() -> Result<(), String> {
     match fs::create_dir("output") {
         Ok(_) => Ok(()),
         Err(e) => {
@@ -25,7 +25,7 @@ fn make_output_dir() -> std::result::Result<(), String> {
     }
 }
 
-fn generate_asm(formula: &str) -> std::result::Result<(), String> {
+fn generate_asm(formula: &str) -> Result<(), String> {
     let token_list = tokenize(formula)?;
     let mut tokens = Tokens::new(token_list);
 
@@ -40,7 +40,7 @@ fn generate_asm(formula: &str) -> std::result::Result<(), String> {
 
     match assemble(&mut f, nodes) {
         Ok(_) => Ok(()),
-        Err(_) => Err(format!("Cannot generate assembly code!")),
+        Err(e) => Err(format!("Cannot generate assembly code! {:?}", e))
     }
 }
 
