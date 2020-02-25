@@ -63,7 +63,15 @@ fn primary(tokens: &mut Tokens) -> Box<Node> {
     } else if let Some(var) = tokens.expect_var() {
         node = new_node_var(var);
     } else {
-        node = new_node_num(tokens.expect_num());
+        let num = match tokens.expect_num() {
+            Some(n) => n,
+            None => {
+                print!("{}^ ", " ".repeat(tokens.head()));
+                println!("Not a number!");
+                std::process::exit(1);
+            },
+        };
+        node = new_node_num(num);
     }
     node
 }

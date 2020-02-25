@@ -15,77 +15,60 @@ pub struct Token {
     pos: usize,
 }
 
-impl Token {
-    fn get_num(&self) -> Option<u32> {
-        match self.kind {
-            TokenNum(num) => Some(num),
-            _ => None,
-        }
-    }
-
-    fn get_op(&self) -> Option<&str> {
-        match &self.kind {
-            TokenOp(op) => Some(&op),
-            _ => None,
-        }
-    }
-
-    fn get_var(&self) -> Option<&str> {
-        match &self.kind {
-            TokenVar(var) => Some(&var),
-            _ => None,
-        }
-    }
-
-    fn get_pos(&self) -> usize {
-        self.pos
-    }
-}
-
 pub struct Tokens {
     list: Vec<Token>,
     current: usize,
 }
 
 impl Tokens {
-    pub fn expect_num(&mut self) -> u32 {
-        if let Some(num) = self.list[self.current].get_num() {
-            self.current += 1;
-            num
-        } else {
-            print!("{}^ ", " ".repeat(self.list[self.current].get_pos()));
-            println!("Not a number!");
-            std::process::exit(1);
+    pub fn expect_num(&mut self) -> Option<u32> {
+        let cur_tok = &self.list[self.current];
+        match &cur_tok.kind {
+            TokenNum(num) => {
+                self.current += 1;
+                Some(*num)
+            },
+            _ => None
         }
     }
 
     pub fn expect_op(&mut self, expect: &str) -> bool {
-        if let Some(op) = self.list[self.current].get_op() {
-            if op == expect {
-                self.current += 1;
-                true
-            } else {
-                false
-            }
-        } else {
-            false
+        let cur_tok = &self.list[self.current];
+        match &cur_tok.kind {
+            TokenOp(op) => {
+                if op == expect {
+                    self.current += 1;
+                    true
+                } else {
+                    false
+                }
+            },
+            _ => false
         }
     }
 
     pub fn expect_var(&mut self) -> Option<&str> {
-        if let Some(var) = self.list[self.current].get_var() {
-            self.current += 1;
-            Some(var)
-        } else {
-            None
+        let cur_tok = &self.list[self.current];
+        match &cur_tok.kind {
+            TokenVar(var) => {
+                self.current += 1;
+                Some(var.as_str())
+            },
+            _ => None
         }
     }
 
     pub fn has_next(&self) -> bool {
-        match self.list[self.current].kind {
+        let cur_tok = &self.list[self.current];
+        match &cur_tok.kind {
             TokenEnd => false,
             _ => true,
         }
+    }
+
+    pub fn head(&self) -> usize {
+        let cur_tok = &self.list[self.current];
+        cur_tok.pos
     }
 
     pub fn new(v: Vec<Token>) -> Self {
