@@ -16,21 +16,21 @@ pub struct Token {
 }
 
 impl Token {
-    fn get_num(&self) -> std::option::Option<u32> {
+    fn get_num(&self) -> Option<u32> {
         match self.kind {
             TokenNum(num) => Some(num),
             _ => None,
         }
     }
 
-    fn get_op(&self) -> std::option::Option<&str> {
+    fn get_op(&self) -> Option<&str> {
         match &self.kind {
             TokenOp(op) => Some(&op),
             _ => None,
         }
     }
 
-    fn get_var(&self) -> std::option::Option<&str> {
+    fn get_var(&self) -> Option<&str> {
         match &self.kind {
             TokenVar(var) => Some(&var),
             _ => None,
@@ -72,7 +72,7 @@ impl Tokens {
         }
     }
 
-    pub fn expect_var(&mut self) -> std::option::Option<&str> {
+    pub fn expect_var(&mut self) -> Option<&str> {
         if let Some(var) = self.list[self.current].get_var() {
             self.current += 1;
             Some(var)
