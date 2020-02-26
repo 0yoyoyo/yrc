@@ -55,11 +55,16 @@ fn new_node_var(var: &str) -> Box<Node> {
     node
 }
 
-fn primary(tokens: &mut Tokens) -> Box<Node> {
+fn primary(tokens: &mut Tokens) -> Result<Box<Node>, String> {
     let node: Box<Node>;
     if tokens.expect_op("(") {
-        node = expr(tokens);
-        tokens.expect_op(")");
+        match expr(tokens) {
+            Ok(n) => node = n,
+            Err(e) => return Err(e),
+        }
+        if !tokens.expect_op(")") {
+            return Err(format!("Cannot find right parenthesis!"));
+        }
     } else if let Some(var) = tokens.expect_var() {
         node = new_node_var(var);
     } else {
@@ -67,104 +72,156 @@ fn primary(tokens: &mut Tokens) -> Box<Node> {
             Some(n) => n,
             None => {
                 print!("{}^ ", " ".repeat(tokens.head()));
-                println!("Not a number!");
-                std::process::exit(1);
+                return Err(format!("Not a number!"));
             },
         };
         node = new_node_num(num);
     }
-    node
+    Ok(node)
 }
 
-fn unary(tokens: &mut Tokens) -> Box<Node> {
-    let node: Box<Node>;
+fn unary(tokens: &mut Tokens) -> Result<Box<Node>, String> {
     if tokens.expect_op("-") {
-        node = new_node(NodeSub, new_node_num(0), primary(tokens));
+        primary(tokens).map(|rhs| new_node(NodeSub, new_node_num(0), rhs))
     } else {
-        node = primary(tokens);
+        primary(tokens)
     }
-    node
 }
 
-fn mul(tokens: &mut Tokens) -> Box<Node> {
-    let mut node = unary(tokens);
+fn mul(tokens: &mut Tokens) -> Result<Box<Node>, String> {
+    let mut node: Box<Node>;
+    match unary(tokens) {
+        Ok(n) => node = n,
+        Err(e) => return Err(e),
+    }
     while tokens.has_next() {
         if tokens.expect_op("*") {
-            node = new_node(NodeMul, node, unary(tokens));
+            match unary(tokens) {
+                Ok(rhs) => node = new_node(NodeMul, node, rhs),
+                Err(e) => return Err(e),
+            }
         } else if tokens.expect_op("/") {
-            node = new_node(NodeDiv, node, unary(tokens));
+            match unary(tokens) {
+                Ok(rhs) => node = new_node(NodeDiv, node, rhs),
+                Err(e) => return Err(e),
+            }
         } else {
             break;
         }
     }
-    node
+    Ok(node)
 }
 
-fn add(tokens: &mut Tokens) -> Box<Node> {
-    let mut node = mul(tokens);
+fn add(tokens: &mut Tokens) -> Result<Box<Node>, String> {
+    let mut node: Box<Node>;
+    match mul(tokens) {
+        Ok(n) => node = n,
+        Err(e) => return Err(e),
+    }
     while tokens.has_next() {
         if tokens.expect_op("+") {
-            node = new_node(NodeAdd, node, mul(tokens));
+            match mul(tokens) {
+                Ok(rhs) => node = new_node(NodeAdd, node, rhs),
+                Err(e) => return Err(e),
+            }
         } else if tokens.expect_op("-") {
-            node = new_node(NodeSub, node, mul(tokens));
+            match mul(tokens) {
+                Ok(rhs) => node = new_node(NodeSub, node, rhs),
+                Err(e) => return Err(e),
+            }
         } else {
             break;
         }
     }
-    node
+    Ok(node)
 }
 
-fn relational(tokens: &mut Tokens) -> Box<Node> {
-    let mut node = add(tokens);
+fn relational(tokens: &mut Tokens) -> Result<Box<Node>, String> {
+    let mut node: Box<Node>;
+    match add(tokens) {
+        Ok(n) => node = n,
+        Err(e) => return Err(e),
+    }
     while tokens.has_next() {
         if tokens.expect_op("<") {
-            node = new_node(NodeGr, node, add(tokens));
+            match add(tokens) {
+                Ok(rhs) => node = new_node(NodeGr, node, rhs),
+                Err(e) => return Err(e),
+            }
         } else if tokens.expect_op("<=") {
-            node = new_node(NodeGe, node, add(tokens));
+            match add(tokens) {
+                Ok(rhs) => node = new_node(NodeGe, node, rhs),
+                Err(e) => return Err(e),
+            }
         } else if tokens.expect_op(">") {
-            node = new_node(NodeGr, add(tokens), node);
+            match add(tokens) {
+                Ok(lhs) => node = new_node(NodeGr, lhs, node),
+                Err(e) => return Err(e),
+            }
         } else if tokens.expect_op(">=") {
-            node = new_node(NodeGe, add(tokens), node);
+            match add(tokens) {
+                Ok(lhs) => node = new_node(NodeGe, lhs, node),
+                Err(e) => return Err(e),
+            }
         } else {
             break;
         }
     }
-    node
+    Ok(node)
 }
 
-fn equality(tokens: &mut Tokens) -> Box<Node> {
-    let mut node = relational(tokens);
+fn equality(tokens: &mut Tokens) -> Result<Box<Node>, String> {
+    let mut node: Box<Node>;
+    match relational(tokens) {
+        Ok(n) => node = n,
+        Err(e) => return Err(e),
+    }
     while tokens.has_next() {
         if tokens.expect_op("==") {
-            node = new_node(NodeEq, node, relational(tokens));
+            match relational(tokens) {
+                Ok(rhs) => node = new_node(NodeEq, node, rhs),
+                Err(e) => return Err(e),
+            }
         } else if tokens.expect_op("!=") {
-            node = new_node(NodeNe, node, relational(tokens));
+            match relational(tokens) {
+                Ok(rhs) => node = new_node(NodeNe, node, rhs),
+                Err(e) => return Err(e),
+            }
         } else {
             break;
         }
     }
-    node
+    Ok(node)
 }
 
-fn assign(tokens: &mut Tokens) -> Box<Node> {
-    let mut node = equality(tokens);
-    if tokens.expect_op("=") {
-        node = new_node(NodeAsn, node, assign(tokens));
+fn assign(tokens: &mut Tokens) -> Result<Box<Node>, String> {
+    match equality(tokens) {
+        Ok(node) => {
+            if tokens.expect_op("=") {
+                assign(tokens)
+                    .map(|rhs| new_node(NodeAsn, node, rhs))
+            } else {
+                Ok(node)
+            }
+        },
+        Err(e) => Err(e),
     }
-    node
 }
 
-fn expr(tokens: &mut Tokens) -> Box<Node> {
-    let node = assign(tokens);
-    node
+fn expr(tokens: &mut Tokens) -> Result<Box<Node>, String> {
+    assign(tokens)
 }
 
 fn stmt(tokens: &mut Tokens) -> Result<Box<Node>, String> {
-    let node = expr(tokens);
-    if tokens.expect_op(";") {
-        Ok(node)
-    } else {
-        Err(format!("Cannot find semicolon!"))
+    match expr(tokens) {
+        Ok(node) => {
+            if tokens.expect_op(";") {
+                Ok(node)
+            } else {
+                Err(format!("Cannot find semicolon!"))
+            }
+        },
+        Err(e) => Err(e),
     }
 }
 
