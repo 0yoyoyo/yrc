@@ -116,6 +116,13 @@ mod tests {
     }
 
     #[test]
+    fn calc_local_variable() {
+        return_val_num("a = 1; a;", 1);
+        return_val_num("z = 1; z;", 1);
+        return_val_num("n = 10 + 2; n * 2;", 24);
+    }
+
+    #[test]
     fn check_format() {
         return_val_num("1+2+3;", 6);
         return_val_num(" 1 + 2 + 3 ;", 6);
