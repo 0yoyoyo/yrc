@@ -64,8 +64,7 @@ fn primary(tokens: &mut Tokens) -> Result<Box<Node>, String> {
         Ok(new_node_var(var))
     } else {
         let num = tokens.expect_num()
-                        .ok_or(format!("{}^ Not a number!",
-                            " ".repeat(tokens.head())))?;
+            .ok_or(format!("Not a number!"))?;
         Ok(new_node_num(num))
     }
 }
@@ -176,12 +175,12 @@ fn stmt(tokens: &mut Tokens) -> Result<Box<Node>, String> {
         })
 }
 
-pub fn program(tokens: &mut Tokens) -> Result<Vec<Box<Node>>, String> {
+pub fn program(tokens: &mut Tokens) -> Result<Vec<Box<Node>>, (String, usize)> {
     let mut nodes: Vec<Box<Node>> = Vec::new();
     while tokens.has_next() {
         match stmt(tokens) {
             Ok(node) => nodes.push(node),
-            Err(e) => return Err(e),
+            Err(e) => return Err((e, tokens.head())),
         }
     }
     Ok(nodes)
