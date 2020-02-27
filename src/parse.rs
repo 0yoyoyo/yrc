@@ -35,24 +35,21 @@ fn new_node(kind: NodeKind, lhs: Box<Node>, rhs: Box<Node>) -> Box<Node> {
         lhs: lhs,
         rhs: rhs,
     };
-    let node = Box::new(node);
-    node
+    Box::new(node)
 }
 
 fn new_node_num(val: u32) -> Box<Node> {
     let node = Node::Number {
         val: val,
     };
-    let node = Box::new(node);
-    node
+    Box::new(node)
 }
 
 fn new_node_var(var: &str) -> Box<Node> {
     let node = Node::LocalVariable {
         offset: ((var.as_bytes()[0] - b'a' + 1) * 8) as usize,
     };
-    let node = Box::new(node);
-    node
+    Box::new(node)
 }
 
 fn primary(tokens: &mut Tokens) -> Result<Box<Node>, String> {
@@ -68,8 +65,9 @@ fn primary(tokens: &mut Tokens) -> Result<Box<Node>, String> {
     } else if let Some(var) = tokens.expect_var() {
         node = new_node_var(var);
     } else {
-        let num = match tokens.expect_num() {
-            Some(n) => n,
+        let num: u32;
+        match tokens.expect_num() {
+            Some(n) => num = n,
             None => {
                 print!("{}^ ", " ".repeat(tokens.head()));
                 return Err(format!("Not a number!"));
@@ -82,7 +80,8 @@ fn primary(tokens: &mut Tokens) -> Result<Box<Node>, String> {
 
 fn unary(tokens: &mut Tokens) -> Result<Box<Node>, String> {
     if tokens.expect_op("-") {
-        primary(tokens).map(|rhs| new_node(NodeSub, new_node_num(0), rhs))
+        primary(tokens)
+            .map(|rhs| new_node(NodeSub, new_node_num(0), rhs))
     } else {
         primary(tokens)
     }
@@ -195,17 +194,15 @@ fn equality(tokens: &mut Tokens) -> Result<Box<Node>, String> {
 }
 
 fn assign(tokens: &mut Tokens) -> Result<Box<Node>, String> {
-    match equality(tokens) {
-        Ok(node) => {
+    equality(tokens)
+        .and_then(|node| {
             if tokens.expect_op("=") {
                 assign(tokens)
                     .map(|rhs| new_node(NodeAsn, node, rhs))
             } else {
                 Ok(node)
             }
-        },
-        Err(e) => Err(e),
-    }
+        })
 }
 
 fn expr(tokens: &mut Tokens) -> Result<Box<Node>, String> {
@@ -213,22 +210,23 @@ fn expr(tokens: &mut Tokens) -> Result<Box<Node>, String> {
 }
 
 fn stmt(tokens: &mut Tokens) -> Result<Box<Node>, String> {
-    match expr(tokens) {
-        Ok(node) => {
+    expr(tokens)
+        .and_then(|node| {
             if tokens.expect_op(";") {
                 Ok(node)
             } else {
                 Err(format!("Cannot find semicolon!"))
             }
-        },
-        Err(e) => Err(e),
-    }
+        })
 }
 
 pub fn program(tokens: &mut Tokens) -> Result<Vec<Box<Node>>, String> {
     let mut nodes: Vec<Box<Node>> = Vec::new();
     while tokens.has_next() {
-        stmt(tokens).map(|node| nodes.push(node))?;
+        match stmt(tokens) {
+            Ok(node) => nodes.push(node),
+            Err(e) => return Err(e),
+        }
     }
     Ok(nodes)
 }
