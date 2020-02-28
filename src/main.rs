@@ -30,7 +30,7 @@ fn generate_asm(formula: &str) -> Result<(), String> {
     let mut tokens = Tokens::new(token_list);
 
     let nodes = program(&mut tokens)
-        .map_err(|(msg, pos)| format!("{}^ {}", " ".repeat(pos), msg))?;
+        .map_err(|e| format!("{}", e))?;
 
     make_output_dir()?;
     let mut f = File::create("output/tmp.s")

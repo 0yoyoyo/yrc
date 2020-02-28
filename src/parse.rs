@@ -1,6 +1,40 @@
+use std::fmt;
+
 use crate::token::Tokens;
 
 use NodeKind::*;
+use ParseErrorKind::*;
+
+pub enum ParseErrorKind {
+    NumberExpected,
+    ParenExpected,
+    ScolonExpected,
+}
+
+pub struct ParseError {
+    error: ParseErrorKind,
+    pos: usize,
+}
+
+impl ParseError {
+    fn new(e: ParseErrorKind, toks: &Tokens) -> Self {
+        ParseError {
+            error: e,
+            pos: toks.head(),
+        }
+    }
+}
+
+impl fmt::Display for ParseError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}^ ", " ".repeat(self.pos))?;
+        match &self.error {
+            NumberExpected => write!(f, "Number is expected here!"),
+            ParenExpected => write!(f, "Parentheses are not closed!"),
+            ScolonExpected => write!(f, "Semicolon is needed!"),
+        }
+    }
+}
 
 #[derive(PartialEq)]
 pub enum NodeKind {
@@ -52,24 +86,24 @@ fn new_node_var(var: &str) -> Box<Node> {
     Box::new(node)
 }
 
-fn primary(tokens: &mut Tokens) -> Result<Box<Node>, String> {
+fn primary(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
     if tokens.expect_op("(") {
         let node = expr(tokens)?;
         if tokens.expect_op(")") {
             Ok(node)
         } else {
-            Err(format!("Cannot find right parenthesis!"))
+            Err(ParseError::new(ParenExpected, tokens))
         }
     } else if let Some(var) = tokens.expect_var() {
         Ok(new_node_var(var))
     } else {
         let num = tokens.expect_num()
-            .ok_or(format!("Not a number!"))?;
+            .ok_or(ParseError::new(NumberExpected, tokens))?;
         Ok(new_node_num(num))
     }
 }
 
-fn unary(tokens: &mut Tokens) -> Result<Box<Node>, String> {
+fn unary(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
     if tokens.expect_op("-") {
         primary(tokens)
             .map(|rhs| new_node(NodeSub, new_node_num(0), rhs))
@@ -78,7 +112,7 @@ fn unary(tokens: &mut Tokens) -> Result<Box<Node>, String> {
     }
 }
 
-fn mul(tokens: &mut Tokens) -> Result<Box<Node>, String> {
+fn mul(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
     let mut node = unary(tokens)?;
     while tokens.has_next() {
         if tokens.expect_op("*") {
@@ -94,7 +128,7 @@ fn mul(tokens: &mut Tokens) -> Result<Box<Node>, String> {
     Ok(node)
 }
 
-fn add(tokens: &mut Tokens) -> Result<Box<Node>, String> {
+fn add(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
     let mut node = mul(tokens)?;
     while tokens.has_next() {
         if tokens.expect_op("+") {
@@ -110,7 +144,7 @@ fn add(tokens: &mut Tokens) -> Result<Box<Node>, String> {
     Ok(node)
 }
 
-fn relational(tokens: &mut Tokens) -> Result<Box<Node>, String> {
+fn relational(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
     let mut node = add(tokens)?;
     while tokens.has_next() {
         if tokens.expect_op("<") {
@@ -132,7 +166,7 @@ fn relational(tokens: &mut Tokens) -> Result<Box<Node>, String> {
     Ok(node)
 }
 
-fn equality(tokens: &mut Tokens) -> Result<Box<Node>, String> {
+fn equality(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
     let mut node = relational(tokens)?;
     while tokens.has_next() {
         if tokens.expect_op("==") {
@@ -148,7 +182,7 @@ fn equality(tokens: &mut Tokens) -> Result<Box<Node>, String> {
     Ok(node)
 }
 
-fn assign(tokens: &mut Tokens) -> Result<Box<Node>, String> {
+fn assign(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
     equality(tokens)
         .and_then(|node| {
             if tokens.expect_op("=") {
@@ -160,27 +194,27 @@ fn assign(tokens: &mut Tokens) -> Result<Box<Node>, String> {
         })
 }
 
-fn expr(tokens: &mut Tokens) -> Result<Box<Node>, String> {
+fn expr(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
     assign(tokens)
 }
 
-fn stmt(tokens: &mut Tokens) -> Result<Box<Node>, String> {
+fn stmt(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
     expr(tokens)
         .and_then(|node| {
             if tokens.expect_op(";") {
                 Ok(node)
             } else {
-                Err(format!("Cannot find semicolon!"))
+                Err(ParseError::new(ScolonExpected, tokens))
             }
         })
 }
 
-pub fn program(tokens: &mut Tokens) -> Result<Vec<Box<Node>>, (String, usize)> {
+pub fn program(tokens: &mut Tokens) -> Result<Vec<Box<Node>>, ParseError> {
     let mut nodes: Vec<Box<Node>> = Vec::new();
     while tokens.has_next() {
         match stmt(tokens) {
             Ok(node) => nodes.push(node),
-            Err(e) => return Err((e, tokens.head())),
+            Err(e) => return Err(e),
         }
     }
     Ok(nodes)
