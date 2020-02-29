@@ -32,9 +32,10 @@ impl From<io::Error> for AsmError {
 fn assemble_lval(f: &mut File, node: Box<Node>) -> Result<(), AsmError> {
     match *node {
         Node::LocalVariable { offset } => {
-            f.write_fmt(format_args!("    mov rax, rbp\n"))?;
-            f.write_fmt(format_args!("    sub rax, {}\n", offset))?;
-            f.write_fmt(format_args!("    push rax\n"))?;
+            write!(f, "    mov rax, rbp\n")?;
+            write!(f, "    mov rax, rbp\n")?;
+            write!(f, "    sub rax, {}\n", offset)?;
+            write!(f, "    push rax\n")?;
             Ok(())
         },
         _ => Err(Context),
@@ -44,7 +45,7 @@ fn assemble_lval(f: &mut File, node: Box<Node>) -> Result<(), AsmError> {
 fn assemble_node(f: &mut File, node: Box<Node>) -> Result<(), AsmError> {
     match *node {
         Node::Number { val } => {
-            f.write_fmt(format_args!("    push {}\n", val))?;
+            write!(f, "    push {}\n", val)?;
         },
         Node::Operator { kind, lhs, rhs } => {
             if kind == NodeAsn {
@@ -53,54 +54,54 @@ fn assemble_node(f: &mut File, node: Box<Node>) -> Result<(), AsmError> {
                 assemble_node(f, lhs)?;
             }
             assemble_node(f, rhs)?;
-            f.write_fmt(format_args!("    pop rdi\n"))?;
-            f.write_fmt(format_args!("    pop rax\n"))?;
+            write!(f, "    pop rdi\n")?;
+            write!(f, "    pop rax\n")?;
             match kind {
                 NodeAdd => {
-                    f.write_fmt(format_args!("    add rax, rdi\n"))?;
+                    write!(f, "    add rax, rdi\n")?;
                 },
                 NodeSub => {
-                    f.write_fmt(format_args!("    sub rax, rdi\n"))?;
+                    write!(f, "    sub rax, rdi\n")?;
                 },
                 NodeMul => {
-                    f.write_fmt(format_args!("    imul rax, rdi\n"))?;
+                    write!(f, "    imul rax, rdi\n")?;
                 },
                 NodeDiv => {
-                    f.write_fmt(format_args!("    cqo\n"))?;
-                    f.write_fmt(format_args!("    idiv rdi\n"))?;
+                    write!(f, "    cqo\n")?;
+                    write!(f, "    idiv rdi\n")?;
                 },
                 NodeEq => {
-                    f.write_fmt(format_args!("    cmp rax, rdi\n"))?;
-                    f.write_fmt(format_args!("    sete al\n"))?;
-                    f.write_fmt(format_args!("    movzb rax, al\n"))?;
+                    write!(f, "    cmp rax, rdi\n")?;
+                    write!(f, "    sete al\n")?;
+                    write!(f, "    movzb rax, al\n")?;
                 },
                 NodeNe => {
-                    f.write_fmt(format_args!("    cmp rax, rdi\n"))?;
-                    f.write_fmt(format_args!("    setne al\n"))?;
-                    f.write_fmt(format_args!("    movzb rax, al\n"))?;
+                    write!(f, "    cmp rax, rdi\n")?;
+                    write!(f, "    setne al\n")?;
+                    write!(f, "    movzb rax, al\n")?;
                 },
                 NodeGr => {
-                    f.write_fmt(format_args!("    cmp rax, rdi\n"))?;
-                    f.write_fmt(format_args!("    setl al\n"))?;
-                    f.write_fmt(format_args!("    movzb rax, al\n"))?;
+                    write!(f, "    cmp rax, rdi\n")?;
+                    write!(f, "    setl al\n")?;
+                    write!(f, "    movzb rax, al\n")?;
                 },
                 NodeGe => {
-                    f.write_fmt(format_args!("    cmp rax, rdi\n"))?;
-                    f.write_fmt(format_args!("    setle al\n"))?;
-                    f.write_fmt(format_args!("    movzb rax, al\n"))?;
+                    write!(f, "    cmp rax, rdi\n")?;
+                    write!(f, "    setle al\n")?;
+                    write!(f, "    movzb rax, al\n")?;
                 },
                 NodeAsn => {
-                    f.write_fmt(format_args!("    mov [rax], rdi\n"))?;
-                    f.write_fmt(format_args!("    push rdi\n"))?;
+                    write!(f, "    mov [rax], rdi\n")?;
+                    write!(f, "    push rdi\n")?;
                 },
             }
-            f.write_fmt(format_args!("    push rax\n"))?;
+            write!(f, "    push rax\n")?;
         },
         Node::LocalVariable { offset: _ } => {
             assemble_lval(f, node)?;
-            f.write_fmt(format_args!("    pop rax\n"))?;
-            f.write_fmt(format_args!("    mov rax, [rax]\n"))?;
-            f.write_fmt(format_args!("    push rax\n"))?;
+            write!(f, "    pop rax\n")?;
+            write!(f, "    mov rax, [rax]\n")?;
+            write!(f, "    push rax\n")?;
         },
     }
 
@@ -108,22 +109,22 @@ fn assemble_node(f: &mut File, node: Box<Node>) -> Result<(), AsmError> {
 }
 
 pub fn assemble(f: &mut File, nodes: Vec<Box<Node>>) -> Result<(), AsmError> {
-    f.write_fmt(format_args!(".intel_syntax noprefix\n"))?;
-    f.write_fmt(format_args!(".global main\n"))?;
-    f.write_fmt(format_args!("main:\n"))?;
+    write!(f, ".intel_syntax noprefix\n")?;
+    write!(f, ".global main\n")?;
+    write!(f, "main:\n")?;
 
-    f.write_fmt(format_args!("    push rbp\n"))?;
-    f.write_fmt(format_args!("    mov rbp, rsp\n"))?;
-    f.write_fmt(format_args!("    sub rsp, 208\n"))?;
+    write!(f, "    push rbp\n")?;
+    write!(f, "    mov rbp, rsp\n")?;
+    write!(f, "    sub rsp, 208\n")?;
 
     for node in nodes.into_iter() {
         assemble_node(f, node)?;
-        f.write_fmt(format_args!("    pop rax\n"))?;
+        write!(f, "    pop rax\n")?;
     }
 
-    f.write_fmt(format_args!("    mov rsp, rbp\n"))?;
-    f.write_fmt(format_args!("    pop rbp\n"))?;
-    f.write_fmt(format_args!("    ret\n"))?;
+    write!(f, "    mov rsp, rbp\n")?;
+    write!(f, "    pop rbp\n")?;
+    write!(f, "    ret\n")?;
 
     Ok(())
 }
