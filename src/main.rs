@@ -74,7 +74,7 @@ fn make_output_dir() -> Result<(), io::Error> {
     }
 }
 
-fn generate_asm(formula: &str) -> Result<(), CompileError> {
+fn compile(formula: &str) -> Result<(), CompileError> {
     let token_list = tokenize(formula)?;
     let mut tokens = Tokens::new(token_list);
 
@@ -92,7 +92,7 @@ fn main() {
     let args: Vec<String> = env::args().collect();
 
     if args.len() == 2 {
-        match generate_asm(&args[1]) {
+        match compile(&args[1]) {
             Ok(_) => (),
             Err(e) => {
                 println!("Error!");
@@ -116,7 +116,7 @@ mod tests {
     use std::process::Command;
 
     fn return_val_num(formula: &str, expect: u32) {
-        assert_eq!(Ok(()), generate_asm(formula));
+        assert_eq!(Ok(()), compile(formula));
         let out = Command::new("bash")
                           .arg("-c")
                           .arg("script/test.sh")
