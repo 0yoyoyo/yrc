@@ -1,6 +1,35 @@
 use std::str;
+use std::fmt;
 
 use TokenKind::*;
+use TokenErrorKind::*;
+
+pub enum TokenErrorKind {
+    CannotTokenize,
+}
+
+pub struct TokenError {
+    error: TokenErrorKind,
+    pos: usize,
+}
+
+impl TokenError {
+    fn new(e: TokenErrorKind, p: usize) -> Self {
+        TokenError {
+            error: e,
+            pos: p,
+        }
+    }
+}
+
+impl fmt::Display for TokenError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}^ ", " ".repeat(self.pos))?;
+        match &self.error {
+            CannotTokenize => write!(f, "Cannot tokenize!"),
+        }
+    }
+}
 
 #[derive(PartialEq)]
 pub enum TokenKind {
@@ -79,7 +108,7 @@ impl Tokens {
     }
 }
 
-pub fn tokenize(formula: &str) -> Result<Vec<Token>, String> {
+pub fn tokenize(formula: &str) -> Result<Vec<Token>, TokenError> {
     let mut v: Vec<Token> = Vec::new();
     let mut num_tmp: Vec<u8> = Vec::new();
     let mut op_tmp: Vec<u8> = Vec::new();
@@ -132,7 +161,7 @@ pub fn tokenize(formula: &str) -> Result<Vec<Token>, String> {
                 v.push(Token { kind: TokenVar(var), pos: index});
             },
             b' ' | b'\t'| b'\n' => (),
-            _ => return Err(format!("Cannot tokenize!")),
+            _ => return Err(TokenError::new(CannotTokenize, index)),
         }
         index += 1;
     }

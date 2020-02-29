@@ -1,17 +1,29 @@
+use std::fmt;
+use std::io;
 use std::fs::File;
 use std::io::prelude::*;
 
 use crate::parse::Node;
 use crate::parse::NodeKind::*;
 
-#[derive(Debug)]
+use AsmError::*;
+
 pub enum AsmError {
-    Io(std::io::Error),
-    Context(String),
+    Io(io::Error),
+    Context,
 }
 
-impl From<std::io::Error> for AsmError {
-    fn from(e: std::io::Error) -> Self {
+impl fmt::Display for AsmError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Io(e) => write!(f, "IO error! ({})", e),
+            Context => write!(f, "Lvalue is invalid!"),
+        }
+    }
+}
+
+impl From<io::Error> for AsmError {
+    fn from(e: io::Error) -> Self {
         AsmError::Io(e)
     }
 }
@@ -24,7 +36,7 @@ fn assemble_lval(f: &mut File, node: Box<Node>) -> Result<(), AsmError> {
             f.write_fmt(format_args!("    push rax\n"))?;
             Ok(())
         },
-        _ => Err(AsmError::Context(format!("Lvalue is invalid!"))),
+        _ => Err(Context),
     }
 }
 
