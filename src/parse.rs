@@ -5,12 +5,14 @@ use crate::token::Tokens;
 use NodeKind::*;
 use ParseErrorKind::*;
 
+#[derive(Debug)]
 pub enum ParseErrorKind {
     NumberExpected,
     ParenExpected,
     ScolonExpected,
 }
 
+#[derive(Debug)]
 pub struct ParseError {
     error: ParseErrorKind,
     pos: usize,

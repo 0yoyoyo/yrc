@@ -19,6 +19,7 @@ use assemble::AsmError;
 
 use CompileError::*;
 
+#[derive(Debug)]
 enum CompileError {
     Env(io::Error),
     Token(TokenError),
@@ -116,7 +117,7 @@ mod tests {
     use std::process::Command;
 
     fn return_val_num(formula: &str, expect: u32) {
-        assert_eq!(Ok(()), compile(formula));
+        compile(formula).unwrap();
         let out = Command::new("bash")
                           .arg("-c")
                           .arg("script/test.sh")

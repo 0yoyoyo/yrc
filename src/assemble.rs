@@ -8,6 +8,7 @@ use crate::parse::NodeKind::*;
 
 use AsmError::*;
 
+#[derive(Debug)]
 pub enum AsmError {
     Io(io::Error),
     Context,

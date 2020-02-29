@@ -4,10 +4,12 @@ use std::fmt;
 use TokenKind::*;
 use TokenErrorKind::*;
 
+#[derive(Debug)]
 pub enum TokenErrorKind {
     CannotTokenize,
 }
 
+#[derive(Debug)]
 pub struct TokenError {
     error: TokenErrorKind,
     pos: usize,
