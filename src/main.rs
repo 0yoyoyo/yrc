@@ -130,6 +130,14 @@ mod tests {
             .trim()
             .parse()
             .unwrap();
+        Command::new("rm")
+            .arg(OUTPUT_DIR.to_string() + "/tmp.s")
+            .output()
+            .unwrap();
+        Command::new("rm")
+            .arg(OUTPUT_DIR.to_string() + "/tmp")
+            .output()
+            .unwrap();
         println!("{} -> {} (expected: {})", formula, answer, expect);
         assert_eq!(expect, answer);
     }
