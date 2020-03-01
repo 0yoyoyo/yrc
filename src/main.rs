@@ -1,6 +1,6 @@
 mod token;
 mod parse;
-mod assemble;
+mod assembly;
 
 use std::env;
 use std::str;
@@ -14,8 +14,8 @@ use token::Tokens;
 use token::TokenError;
 use parse::program;
 use parse::ParseError;
-use assemble::gen_asm;
-use assemble::AsmError;
+use assembly::gen_asm;
+use assembly::AsmError;
 
 use CompileError::*;
 
