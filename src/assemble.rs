@@ -29,7 +29,7 @@ impl From<io::Error> for AsmError {
     }
 }
 
-fn assemble_lval(f: &mut File, node: Box<Node>) -> Result<(), AsmError> {
+fn gen_asm_lval(f: &mut File, node: Box<Node>) -> Result<(), AsmError> {
     match *node {
         Node::LocalVariable { offset } => {
             write!(f, "    mov rax, rbp\n")?;
@@ -42,18 +42,18 @@ fn assemble_lval(f: &mut File, node: Box<Node>) -> Result<(), AsmError> {
     }
 }
 
-fn assemble_node(f: &mut File, node: Box<Node>) -> Result<(), AsmError> {
+fn gen_asm_node(f: &mut File, node: Box<Node>) -> Result<(), AsmError> {
     match *node {
         Node::Number { val } => {
             write!(f, "    push {}\n", val)?;
         },
         Node::Operator { kind, lhs, rhs } => {
             if kind == NodeAsn {
-                assemble_lval(f, lhs)?;
+                gen_asm_lval(f, lhs)?;
             } else {
-                assemble_node(f, lhs)?;
+                gen_asm_node(f, lhs)?;
             }
-            assemble_node(f, rhs)?;
+            gen_asm_node(f, rhs)?;
             write!(f, "    pop rdi\n")?;
             write!(f, "    pop rax\n")?;
             match kind {
@@ -98,7 +98,7 @@ fn assemble_node(f: &mut File, node: Box<Node>) -> Result<(), AsmError> {
             write!(f, "    push rax\n")?;
         },
         Node::LocalVariable { offset: _ } => {
-            assemble_lval(f, node)?;
+            gen_asm_lval(f, node)?;
             write!(f, "    pop rax\n")?;
             write!(f, "    mov rax, [rax]\n")?;
             write!(f, "    push rax\n")?;
@@ -108,7 +108,7 @@ fn assemble_node(f: &mut File, node: Box<Node>) -> Result<(), AsmError> {
     Ok(())
 }
 
-pub fn assemble(f: &mut File, nodes: Vec<Box<Node>>) -> Result<(), AsmError> {
+pub fn gen_asm(f: &mut File, nodes: Vec<Box<Node>>) -> Result<(), AsmError> {
     write!(f, ".intel_syntax noprefix\n")?;
     write!(f, ".global main\n")?;
     write!(f, "main:\n")?;
@@ -118,7 +118,7 @@ pub fn assemble(f: &mut File, nodes: Vec<Box<Node>>) -> Result<(), AsmError> {
     write!(f, "    sub rsp, 208\n")?;
 
     for node in nodes.into_iter() {
-        assemble_node(f, node)?;
+        gen_asm_node(f, node)?;
         write!(f, "    pop rax\n")?;
     }
 

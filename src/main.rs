@@ -14,7 +14,7 @@ use token::Tokens;
 use token::TokenError;
 use parse::program;
 use parse::ParseError;
-use assemble::assemble;
+use assemble::gen_asm;
 use assemble::AsmError;
 
 use CompileError::*;
@@ -86,7 +86,7 @@ fn compile(formula: &str) -> Result<(), CompileError> {
     make_output_dir()?;
     let mut f = File::create(OUTPUT_DIR.to_string() + "/tmp.s")?;
 
-    assemble(&mut f, nodes)?;
+    gen_asm(&mut f, nodes)?;
 
     Ok(())
 }
