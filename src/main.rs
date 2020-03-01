@@ -122,7 +122,7 @@ mod tests {
         compile(formula).unwrap();
         let output = Command::new("bash")
             .arg("-c")
-            .arg("script/test.sh")
+            .arg("script/assemble.sh")
             .output()
             .unwrap();
         let answer = str::from_utf8(&output.stdout)
