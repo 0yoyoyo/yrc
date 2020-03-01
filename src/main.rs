@@ -19,6 +19,8 @@ use assemble::AsmError;
 
 use CompileError::*;
 
+const OUTPUT_DIR: & str = "output";
+
 #[derive(Debug)]
 enum CompileError {
     Env(io::Error),
@@ -63,7 +65,7 @@ impl fmt::Display for CompileError {
 }
 
 fn make_output_dir() -> Result<(), io::Error> {
-    match fs::create_dir("output") {
+    match fs::create_dir(OUTPUT_DIR) {
         Ok(_) => Ok(()),
         Err(e) => {
             if e.kind() == std::io::ErrorKind::AlreadyExists {
@@ -82,7 +84,7 @@ fn compile(formula: &str) -> Result<(), CompileError> {
     let nodes = program(&mut tokens)?;
 
     make_output_dir()?;
-    let mut f = File::create("output/tmp.s")?;
+    let mut f = File::create(OUTPUT_DIR.to_string() + "/tmp.s")?;
 
     assemble(&mut f, nodes)?;
 
