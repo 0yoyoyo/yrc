@@ -3,8 +3,8 @@ use std::io;
 use std::fs::File;
 use std::io::prelude::*;
 
-use crate::parse::Node;
-use crate::parse::NodeKind::*;
+use super::parse::Node;
+use super::parse::NodeKind::*;
 
 use AsmError::*;
 

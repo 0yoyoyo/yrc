@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::token::Tokens;
+use super::token::Tokens;
 
 use NodeKind::*;
 use ParseErrorKind::*;
