@@ -127,6 +127,7 @@ mod tests {
             .unwrap();
         let answer = str::from_utf8(&output.stdout)
             .unwrap()
+            .trim()
             .parse()
             .unwrap();
         println!("{} -> {} (expected: {})", formula, answer, expect);

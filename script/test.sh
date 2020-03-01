@@ -6,4 +6,4 @@ gcc tmp.s -o tmp
 ./tmp
 actual="$?"
 
-echo -n "$actual"
+echo "$actual"
