@@ -1,7 +1,5 @@
 #!/bin/bash
 
-set -e
-
 if [ -n "$1" ]; then
 	NAME=$1
 else
