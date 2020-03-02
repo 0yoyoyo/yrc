@@ -77,18 +77,22 @@ fn make_output_dir() -> Result<(), io::Error> {
     }
 }
 
-fn compile(formula: &str) -> Result<(), CompileError> {
+fn compile_to_fname(formula: &str, fname: &str) -> Result<(), CompileError> {
     let token_list = tokenize(formula)?;
     let mut tokens = Tokens::new(token_list);
 
     let nodes = program(&mut tokens)?;
 
     make_output_dir()?;
-    let mut f = File::create(OUTPUT_DIR.to_string() + "/tmp.s")?;
+    let mut f = File::create(format!("{}/{}.s", OUTPUT_DIR, fname))?;
 
     gen_asm(&mut f, nodes)?;
 
     Ok(())
+}
+
+fn compile(formula: &str) -> Result<(), CompileError> {
+    compile_to_fname(formula, "tmp")
 }
 
 fn main() {
@@ -117,12 +121,27 @@ fn main() {
 mod tests {
     use super::*;
     use std::process::Command;
+    use rand::prelude::*;
+
+    fn random_string(len: usize) -> String {
+        let source = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ\
+                       abcdefghijklmnopqrstuvwxyz\
+                       0123456789";
+        let mut rng = rand::thread_rng();
+
+        String::from_utf8(
+            source.choose_multiple(&mut rng, len)
+                .cloned()
+                .collect()
+        ).unwrap()
+    }
 
     fn check_return_num(formula: &str, expect: u32) {
-        compile(formula).unwrap();
+        let fname = format!("tmp{}", random_string(8));
+        compile_to_fname(formula, &fname).unwrap();
         let output = Command::new("bash")
             .arg("-c")
-            .arg("script/assemble.sh")
+            .arg(format!("script/assemble.sh {}", fname))
             .output()
             .unwrap();
         let answer = str::from_utf8(&output.stdout)
@@ -130,14 +149,20 @@ mod tests {
             .trim()
             .parse()
             .unwrap();
+        fs::remove_file(format!("{}/{}.s", OUTPUT_DIR, fname))
+            .unwrap();
+        fs::remove_file(format!("{}/{}", OUTPUT_DIR, fname))
+            .unwrap();
+            /*
         Command::new("rm")
-            .arg(OUTPUT_DIR.to_string() + "/tmp.s")
+            .arg(format!("{}/{}.s", OUTPUT_DIR, fname))
             .output()
             .unwrap();
         Command::new("rm")
-            .arg(OUTPUT_DIR.to_string() + "/tmp")
+            .arg(format!("{}/{}", OUTPUT_DIR, fname))
             .output()
             .unwrap();
+            */
         println!("{} -> {} (expected: {})", formula, answer, expect);
         assert_eq!(expect, answer);
     }
