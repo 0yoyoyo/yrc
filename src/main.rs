@@ -19,7 +19,7 @@ use assembly::AsmError;
 
 use CompileError::*;
 
-const OUTPUT_DIR: & str = "output";
+const OUTPUT_DIR: &str = "output";
 
 #[derive(Debug)]
 enum CompileError {
