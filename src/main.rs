@@ -139,6 +139,7 @@ mod tests {
     fn check_return_num(formula: &str, expect: u32) {
         let fname = format!("tmp{}", random_string(8));
         compile_to_fname(formula, &fname).unwrap();
+
         let output = Command::new("bash")
             .arg("-c")
             .arg(format!("script/assemble.sh {}", fname))
@@ -149,20 +150,10 @@ mod tests {
             .trim()
             .parse()
             .unwrap();
-        fs::remove_file(format!("{}/{}.s", OUTPUT_DIR, fname))
-            .unwrap();
-        fs::remove_file(format!("{}/{}", OUTPUT_DIR, fname))
-            .unwrap();
-            /*
-        Command::new("rm")
-            .arg(format!("{}/{}.s", OUTPUT_DIR, fname))
-            .output()
-            .unwrap();
-        Command::new("rm")
-            .arg(format!("{}/{}", OUTPUT_DIR, fname))
-            .output()
-            .unwrap();
-            */
+
+        fs::remove_file(format!("{}/{}.s", OUTPUT_DIR, fname)).unwrap();
+        fs::remove_file(format!("{}/{}", OUTPUT_DIR, fname)).unwrap();
+
         println!("{} -> {} (expected: {})", formula, answer, expect);
         assert_eq!(expect, answer);
     }
@@ -171,9 +162,7 @@ mod tests {
     fn calc_unary() {
         check_return_num("0;", 0);
         check_return_num("123;", 123);
-        //check_return_num("-123;", -123);
         check_return_num("(123);", 123);
-        //check_return_num("-(123);", -123);
     }
 
     #[test]
