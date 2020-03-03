@@ -46,6 +46,15 @@ pub struct Token {
     pos: usize,
 }
 
+impl Token {
+    fn new(k: TokenKind, p: usize) -> Self {
+        Token {
+            kind: k,
+            pos: p,
+        }
+    }
+}
+
 pub struct Tokens {
     list: Vec<Token>,
     current: usize,
@@ -111,9 +120,8 @@ impl Tokens {
 }
 
 pub fn tokenize(formula: &str) -> Result<Vec<Token>, TokenError> {
-    let mut v: Vec<Token> = Vec::new();
-    let mut num_tmp: Vec<u8> = Vec::new();
-    let mut op_tmp: Vec<u8> = Vec::new();
+    let mut tokens: Vec<Token> = Vec::new();
+    let mut tmp: Vec<u8> = Vec::new();
     let mut index = 0;
     let mut pos = 0;
     let bytes = formula.as_bytes();
@@ -122,17 +130,17 @@ pub fn tokenize(formula: &str) -> Result<Vec<Token>, TokenError> {
     while index < len {
         match bytes[index] {
             b'0'..=b'9' => {
-                num_tmp.push(bytes[index]);
+                tmp.push(bytes[index]);
                 if pos == 0 {
                     pos = index;
                 }
                 if (index + 1 < len && 
                     !b"0123456789".contains(&bytes[index + 1])) ||
                    index + 1 == len {
-                    let num = str::from_utf8(&num_tmp).unwrap()
+                    let num = str::from_utf8(&tmp).unwrap()
                               .parse().expect("Cannot parse!");
-                    v.push(Token { kind: TokenNum(num), pos: pos });
-                    num_tmp.clear();
+                    tokens.push(Token::new(TokenNum(num), pos));
+                    tmp.clear();
                     pos = 0;
                 }
             },
@@ -141,26 +149,26 @@ pub fn tokenize(formula: &str) -> Result<Vec<Token>, TokenError> {
             b'(' | b')' |
             b';' => {
                 let op = str::from_utf8(&bytes[index].to_be_bytes()).unwrap().to_string();
-                v.push(Token { kind: TokenOp(op), pos: index});
+                tokens.push(Token::new(TokenOp(op), index));
             },
             b'<' | b'>' |
             b'=' | b'!' => {
-                op_tmp.push(bytes[index]);
+                tmp.push(bytes[index]);
                 if pos == 0 {
                     pos = index;
                 }
                 if (index + 1 < len && 
                     !b"<>=!".contains(&bytes[index + 1])) ||
                    index + 1 == len {
-                    let op = str::from_utf8(&op_tmp).unwrap().to_string();
-                    v.push(Token { kind: TokenOp(op), pos: pos});
-                    op_tmp.clear();
+                    let op = str::from_utf8(&tmp).unwrap().to_string();
+                    tokens.push(Token::new(TokenOp(op), pos));
+                    tmp.clear();
                     pos = 0;
                 }
             },
             b'a'..=b'z' => {
                 let var = str::from_utf8(&bytes[index].to_be_bytes()).unwrap().to_string();
-                v.push(Token { kind: TokenVar(var), pos: index});
+                tokens.push(Token::new(TokenVar(var), index));
             },
             b' ' | b'\t'| b'\n' => (),
             _ => return Err(TokenError::new(CannotTokenize, index)),
@@ -168,7 +176,7 @@ pub fn tokenize(formula: &str) -> Result<Vec<Token>, TokenError> {
         index += 1;
     }
 
-    v.push(Token { kind: TokenEnd, pos: index });
+    tokens.push(Token::new(TokenEnd, index));
 
-    Ok(v)
+    Ok(tokens)
 }
