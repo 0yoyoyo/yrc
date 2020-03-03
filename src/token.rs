@@ -170,10 +170,10 @@ pub fn tokenize(formula: &str) -> Result<Vec<Token>, TokenError> {
                    (!b"abcdefghijklmnopqrstuvwxyz0123456789"
                     .contains(&bytes[cur + 1])) {
                     let pos = cur - (tmp.len() - 1);
-                    let op = str::from_utf8(&tmp)
+                    let var = str::from_utf8(&tmp)
                         .unwrap()
                         .to_string();
-                    tokens.push(Token::new(TokenVar(op), pos));
+                    tokens.push(Token::new(TokenVar(var), pos));
                     tmp.clear();
                 }
             },
