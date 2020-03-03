@@ -33,7 +33,7 @@ impl fmt::Display for TokenError {
     }
 }
 
-#[derive(PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum TokenKind {
     TokenOp(String),
     TokenNum(u32),
@@ -41,6 +41,7 @@ pub enum TokenKind {
     TokenEnd,
 }
 
+#[derive(Debug)]
 pub struct Token {
     kind: TokenKind,
     pos: usize,
@@ -55,6 +56,7 @@ impl Token {
     }
 }
 
+#[derive(Debug)]
 pub struct Tokens {
     list: Vec<Token>,
     current: usize,
@@ -183,5 +185,6 @@ pub fn tokenize(formula: &str) -> Result<Vec<Token>, TokenError> {
 
     tokens.push(Token::new(TokenEnd, cur));
 
+    //println!("{:?}", tokens);
     Ok(tokens)
 }
