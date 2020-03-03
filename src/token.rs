@@ -163,10 +163,17 @@ pub fn tokenize(formula: &str) -> Result<Vec<Token>, TokenError> {
                 }
             },
             b'a'..=b'z' => {
-                let var = str::from_utf8(&bytes[cur].to_be_bytes())
-                    .unwrap()
-                    .to_string();
-                tokens.push(Token::new(TokenVar(var), cur));
+                tmp.push(bytes[cur]);
+                if (cur + 1 >= bytes.len()) ||
+                   (!b"abcdefghijklmnopqrstuvwxyz0123456789"
+                    .contains(&bytes[cur + 1])) {
+                    let pos = cur - (tmp.len() - 1);
+                    let op = str::from_utf8(&tmp)
+                        .unwrap()
+                        .to_string();
+                    tokens.push(Token::new(TokenVar(op), pos));
+                    tmp.clear();
+                }
             },
             b' ' | b'\t'| b'\n' => (),
             _ => return Err(TokenError::new(CannotTokenize, cur)),
