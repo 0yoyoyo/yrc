@@ -1,4 +1,6 @@
 use std::fmt;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 use super::token::Tokens;
 
@@ -65,6 +67,18 @@ pub enum Node {
     },
 }
 
+struct Lvar {
+    name: String,
+    offset: usize,
+}
+
+thread_local!(
+    static LVAR_LIST: Rc<RefCell<Vec<Lvar>>> = {
+        let v: Vec<Lvar> = Vec::new();
+        Rc::new(RefCell::new(v))
+    }
+);
+
 fn new_node(kind: NodeKind, lhs: Box<Node>, rhs: Box<Node>) -> Box<Node> {
     let node = Node::Operator {
         kind: kind,
@@ -82,8 +96,28 @@ fn new_node_num(val: u32) -> Box<Node> {
 }
 
 fn new_node_var(var: &str) -> Box<Node> {
+    let list = LVAR_LIST.with(|v| v.clone());
+    // Set default offset as inputting new variable.
+    let mut offset = 8 * list.borrow().len();
+    let mut i = 0;
+
+    while let Some(lv) = list.borrow().get(i) {
+        if lv.name == var.to_string() {
+            offset = lv.offset;
+            break;
+        }
+        i += 1;
+    }
+    if i == list.borrow().len(){
+        let new = Lvar {
+            name: var.to_string(),
+            offset: 8 * list.borrow().len(),
+        };
+        list.borrow_mut().push(new);
+    }
+
     let node = Node::LocalVariable {
-        offset: ((var.as_bytes()[0] - b'a' + 1) * 8) as usize,
+        offset: offset,
     };
     Box::new(node)
 }

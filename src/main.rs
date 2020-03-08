@@ -202,6 +202,8 @@ mod tests {
         check_return_num("a = 1; a;", 1);
         check_return_num("z = 1; z;", 1);
         check_return_num("n = 10 + 2; n * 2;", 24);
+        check_return_num("abc = 2; def = 3; abc + def;", 5);
+        check_return_num("abc = 2; def = abc + 3; def;", 5);
     }
 
     #[test]
