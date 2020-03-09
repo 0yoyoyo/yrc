@@ -33,7 +33,6 @@ fn gen_asm_lval(f: &mut File, node: Box<Node>) -> Result<(), AsmError> {
     match *node {
         Node::LocalVariable { offset } => {
             write!(f, "    mov rax, rbp\n")?;
-            write!(f, "    mov rax, rbp\n")?;
             write!(f, "    sub rax, {}\n", offset)?;
             write!(f, "    push rax\n")?;
             Ok(())
