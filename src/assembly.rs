@@ -91,7 +91,8 @@ fn gen_asm_node(f: &mut File, node: Box<Node>) -> Result<(), AsmError> {
                 },
                 NodeAsn => {
                     write!(f, "    mov [rax], rdi\n")?;
-                    write!(f, "    push rdi\n")?;
+                    // Is this code needed?
+                    //write!(f, "    push rdi\n")?;
                 },
             }
             write!(f, "    push rax\n")?;
