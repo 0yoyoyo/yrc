@@ -165,10 +165,13 @@ pub fn tokenize(formula: &str) -> Result<Vec<Token>, TokenError> {
                     tmp.clear();
                 }
             },
+            b'A'..=b'Z' |
             b'a'..=b'z' => {
                 tmp.push(bytes[cur]);
                 if (cur + 1 >= bytes.len()) ||
-                   (!b"abcdefghijklmnopqrstuvwxyz0123456789"
+                   (!b"ABCDEFGHIJKLMNOPQRSTUVWXYZ\
+                       abcdefghijklmnopqrstuvwxyz\
+                       0123456789"
                     .contains(&bytes[cur + 1])) {
                     let pos = cur - (tmp.len() - 1);
                     let name = str::from_utf8(&tmp)
