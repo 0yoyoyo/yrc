@@ -80,6 +80,12 @@ thread_local!(
     }
 );
 
+pub fn get_lvar_num() -> usize {
+    let list = LVAR_LIST.with(|v| v.clone());
+    let num = list.borrow().len();
+    num
+}
+
 fn new_node(kind: NodeKind, lhs: Box<Node>, rhs: Box<Node>) -> Box<Node> {
     let node = Node::Operator {
         kind: kind,

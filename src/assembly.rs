@@ -5,6 +5,7 @@ use std::io::prelude::*;
 
 use super::parse::Node;
 use super::parse::NodeKind::*;
+use super::parse::get_lvar_num;
 
 use AsmError::*;
 
@@ -115,7 +116,7 @@ pub fn gen_asm(f: &mut File, nodes: Vec<Box<Node>>) -> Result<(), AsmError> {
 
     write!(f, "    push rbp\n")?;
     write!(f, "    mov rbp, rsp\n")?;
-    write!(f, "    sub rsp, 208\n")?;
+    write!(f, "    sub rsp, {}\n", 8 * get_lvar_num())?;
 
     for node in nodes.into_iter() {
         gen_asm_node(f, node)?;
