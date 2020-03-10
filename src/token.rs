@@ -171,13 +171,13 @@ pub fn tokenize(formula: &str) -> Result<Vec<Token>, TokenError> {
                    (!b"abcdefghijklmnopqrstuvwxyz0123456789"
                     .contains(&bytes[cur + 1])) {
                     let pos = cur - (tmp.len() - 1);
-                    let var = str::from_utf8(&tmp)
+                    let name = str::from_utf8(&tmp)
                         .unwrap()
                         .to_string();
-                    if var == "return".to_string() {
+                    if name == "return".to_string() {
                         tokens.push(Token::new(TokenRet, pos));
                     } else {
-                        tokens.push(Token::new(TokenVar(var), pos));
+                        tokens.push(Token::new(TokenVar(name), pos));
                     }
                     tmp.clear();
                 }
