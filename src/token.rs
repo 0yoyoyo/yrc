@@ -190,6 +190,8 @@ pub fn tokenize(formula: &str) -> Result<Vec<Token>, TokenError> {
 
     tokens.push(Token::new(TokenEnd, cur));
 
-    //println!("{:?}", tokens);
+    #[cfg(feature="trace")]
+    println!(" Tokens {:?}", tokens);
+
     Ok(tokens)
 }

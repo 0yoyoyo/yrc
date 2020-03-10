@@ -260,6 +260,8 @@ pub fn program(tokens: &mut Tokens) -> Result<Vec<Box<Node>>, ParseError> {
             Err(e) => return Err(e),
         }
     }
-    //println!("{:?}", nodes);
+    #[cfg(feature="trace")]
+    println!(" Nodes {:?}", nodes);
+
     Ok(nodes)
 }
