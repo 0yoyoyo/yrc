@@ -38,6 +38,7 @@ pub enum TokenKind {
     TokenOp(String),
     TokenNum(u32),
     TokenVar(String),
+    TokenRet,
     TokenEnd,
 }
 
@@ -173,7 +174,11 @@ pub fn tokenize(formula: &str) -> Result<Vec<Token>, TokenError> {
                     let var = str::from_utf8(&tmp)
                         .unwrap()
                         .to_string();
-                    tokens.push(Token::new(TokenVar(var), pos));
+                    if var == "return".to_string() {
+                        tokens.push(Token::new(TokenRet, pos));
+                    } else {
+                        tokens.push(Token::new(TokenVar(var), pos));
+                    }
                     tmp.clear();
                 }
             },
