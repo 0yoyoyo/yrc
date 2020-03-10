@@ -40,7 +40,7 @@ impl fmt::Display for ParseError {
     }
 }
 
-#[derive(PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum NodeKind {
     NodeAdd,
     NodeSub,
@@ -53,6 +53,7 @@ pub enum NodeKind {
     NodeAsn,
 }
 
+#[derive(Debug)]
 pub enum Node {
     Operator {
         kind: NodeKind,
@@ -253,5 +254,6 @@ pub fn program(tokens: &mut Tokens) -> Result<Vec<Box<Node>>, ParseError> {
             Err(e) => return Err(e),
         }
     }
+    //println!("{:?}", nodes);
     Ok(nodes)
 }
