@@ -101,6 +101,17 @@ impl Tokens {
         }
     }
 
+    pub fn expect_ret(&mut self) -> bool {
+        let cur_tok = &self.list[self.current];
+        match &cur_tok.kind {
+            TokenRet => {
+                self.current += 1;
+                true
+            },
+            _ => false
+        }
+    }
+
     pub fn has_next(&self) -> bool {
         let cur_tok = &self.list[self.current];
         match &cur_tok.kind {

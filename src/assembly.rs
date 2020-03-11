@@ -104,6 +104,13 @@ fn gen_asm_node(f: &mut File, node: Box<Node>) -> Result<(), AsmError> {
             write!(f, "    mov rax, [rax]\n")?;
             write!(f, "    push rax\n")?;
         },
+        Node::Return { rhs } => {
+            gen_asm_node(f, rhs)?;
+            write!(f, "    pop rax\n")?;
+            write!(f, "    mov rsp, rbp\n")?;
+            write!(f, "    pop rbp\n")?;
+            write!(f, "    ret\n")?;
+        },
     }
 
     Ok(())

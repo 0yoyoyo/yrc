@@ -66,6 +66,9 @@ pub enum Node {
     LocalVariable {
         offset: usize,
     },
+    Return {
+        rhs: Box<Node>,
+    },
 }
 
 struct Lvar {
@@ -125,6 +128,13 @@ fn new_node_var(name: &str) -> Box<Node> {
 
     let node = Node::LocalVariable {
         offset: offset,
+    };
+    Box::new(node)
+}
+
+fn new_node_ret(rhs: Box<Node>) -> Box<Node> {
+    let node = Node::Return {
+        rhs: rhs,
     };
     Box::new(node)
 }
@@ -242,14 +252,19 @@ fn expr(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
 }
 
 fn stmt(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
-    expr(tokens)
-        .and_then(|node| {
-            if tokens.expect_op(";") {
-                Ok(node)
-            } else {
-                Err(ParseError::new(ScolonExpected, tokens))
-            }
-        })
+    let node: Box<Node>;
+    if tokens.expect_ret() {
+        let rhs = expr(tokens)?;
+        node = new_node_ret(rhs);
+    } else {
+        node = expr(tokens)?;
+    }
+
+    if tokens.expect_op(";") {
+        Ok(node)
+    } else {
+        Err(ParseError::new(ScolonExpected, tokens))
+    }
 }
 
 pub fn program(tokens: &mut Tokens) -> Result<Vec<Box<Node>>, ParseError> {
