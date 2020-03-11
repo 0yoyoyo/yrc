@@ -39,6 +39,13 @@ pub enum TokenKind {
     TokenNum(u32),
     TokenVar(String),
     TokenRet,
+    TokenIf,
+    TokenEls,
+    TokenFor,
+    TokenDo,
+    TokenWhl,
+    TokenBrk,
+    TokenCnt,
     TokenEnd,
 }
 
@@ -157,6 +164,7 @@ pub fn tokenize(formula: &str) -> Result<Vec<Token>, TokenError> {
             b'+' | b'-' |
             b'*' | b'/' |
             b'(' | b')' |
+            b'{' | b'}' |
             b';' => {
                 let op = str::from_utf8(&bytes[cur].to_ne_bytes())
                     .unwrap()
@@ -190,6 +198,20 @@ pub fn tokenize(formula: &str) -> Result<Vec<Token>, TokenError> {
                         .to_string();
                     if name == "return".to_string() {
                         tokens.push(Token::new(TokenRet, pos));
+                    } else if name == "if".to_string() {
+                        tokens.push(Token::new(TokenIf, pos));
+                    } else if name == "else".to_string() {
+                        tokens.push(Token::new(TokenEls, pos));
+                    } else if name == "for".to_string() {
+                        tokens.push(Token::new(TokenFor, pos));
+                    } else if name == "do".to_string() {
+                        tokens.push(Token::new(TokenDo, pos));
+                    } else if name == "while".to_string() {
+                        tokens.push(Token::new(TokenWhl, pos));
+                    } else if name == "break".to_string() {
+                        tokens.push(Token::new(TokenBrk, pos));
+                    } else if name == "continue".to_string() {
+                        tokens.push(Token::new(TokenCnt, pos));
                     } else {
                         tokens.push(Token::new(TokenVar(name), pos));
                     }
