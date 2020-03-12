@@ -207,6 +207,12 @@ mod tests {
     }
 
     #[test]
+    fn calc_if_else() {
+        check_return_num("a = 1; if 1 == 1 { a = 2; } else { a = 3; } return a;", 2);
+        check_return_num("a = 1; if 1 == 2 { a = 2; } else { a = 3; } return a;", 3);
+    }
+
+    #[test]
     fn check_format() {
         check_return_num("1+2+3;", 6);
         check_return_num(" 1 + 2 + 3 ;", 6);
