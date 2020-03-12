@@ -66,6 +66,9 @@ pub enum Node {
     LocalVariable {
         offset: usize,
     },
+    Block {
+        nodes: Vec<Box<Node>>,
+    },
     Return {
         rhs: Box<Node>,
     },
@@ -141,6 +144,13 @@ fn new_node_var(name: &str) -> Box<Node> {
     Box::new(node)
 }
 
+fn new_node_block(nodes: Vec<Box<Node>>) -> Box<Node> {
+    let node = Node::Block {
+        nodes: nodes,
+    };
+    Box::new(node)
+}
+
 fn new_node_ret(rhs: Box<Node>) -> Box<Node> {
     let node = Node::Return {
         rhs: rhs,
@@ -163,6 +173,17 @@ fn new_node_if_else(cond: Box<Node>, ibody: Box<Node>, ebody: Box<Node>) -> Box<
         ebody: ebody,
     };
     Box::new(node)
+}
+
+fn block(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
+    let mut nodes: Vec<Box<Node>> = Vec::new();
+    while !tokens.expect_op("}") {
+        match stmt(tokens) {
+            Ok(node) => nodes.push(node),
+            Err(e) => return Err(e),
+        }
+    }
+    Ok(new_node_block(nodes))
 }
 
 fn primary(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
@@ -282,23 +303,17 @@ fn if_else(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
 
     let cond = expr(tokens)?;
 
-    let mut ibody: Box<Node>;
+    let ibody: Box<Node>;
     if tokens.expect_op("{") {
-        ibody = stmt(tokens)?;
-        while !tokens.expect_op("}") {
-            ibody = stmt(tokens)?;
-        }
+        ibody = block(tokens)?;
     } else {
         ibody = stmt(tokens)?;
     }
 
     if tokens.expect_rsv("else") {
-        let mut ebody: Box<Node>;
+        let ebody: Box<Node>;
         if tokens.expect_op("{") {
-            ebody = stmt(tokens)?;
-            while !tokens.expect_op("}") {
-                ebody = stmt(tokens)?;
-            }
+            ebody = block(tokens)?;
         } else {
             ebody = stmt(tokens)?;
         }

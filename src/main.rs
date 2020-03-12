@@ -210,6 +210,7 @@ mod tests {
     fn calc_if_else() {
         check_return_num("a = 1; if 1 == 1 { a = 2; } else { a = 3; } return a;", 2);
         check_return_num("a = 1; if 1 == 2 { a = 2; } else { a = 3; } return a;", 3);
+        check_return_num("a = 1; if 1 == 1 { b = 1; a = b + 1; } return a;", 2);
     }
 
     #[test]
