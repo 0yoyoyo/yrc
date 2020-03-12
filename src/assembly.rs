@@ -111,6 +111,25 @@ fn gen_asm_node(f: &mut File, node: Box<Node>) -> Result<(), AsmError> {
             write!(f, "    pop rbp\n")?;
             write!(f, "    ret\n")?;
         },
+        Node::If { cond, ibody } => {
+            gen_asm_node(f, cond)?;
+            write!(f, "    pop rax\n")?;
+            write!(f, "    cmp rax, 0\n")?;
+            write!(f, "    je  .Lend\n")?;
+            gen_asm_node(f, ibody)?;
+            write!(f, ".Lend:\n")?;
+        },
+        Node::IfElse { cond, ibody, ebody } => {
+            gen_asm_node(f, cond)?;
+            write!(f, "    pop rax\n")?;
+            write!(f, "    cmp rax, 0\n")?;
+            write!(f, "    je  .Lelse\n")?;
+            gen_asm_node(f, ibody)?;
+            write!(f, "    je  .Lend\n")?;
+            write!(f, ".Lelse\n")?;
+            gen_asm_node(f, ebody)?;
+            write!(f, ".Lend\n")?;
+        },
     }
 
     Ok(())

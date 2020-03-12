@@ -69,6 +69,15 @@ pub enum Node {
     Return {
         rhs: Box<Node>,
     },
+    If {
+        cond: Box<Node>,
+        ibody: Box<Node>,
+    },
+    IfElse {
+        cond: Box<Node>,
+        ibody: Box<Node>,
+        ebody: Box<Node>,
+    },
 }
 
 struct Lvar {
@@ -135,6 +144,23 @@ fn new_node_var(name: &str) -> Box<Node> {
 fn new_node_ret(rhs: Box<Node>) -> Box<Node> {
     let node = Node::Return {
         rhs: rhs,
+    };
+    Box::new(node)
+}
+
+fn new_node_if(cond: Box<Node>, ibody: Box<Node>) -> Box<Node> {
+    let node = Node::If {
+        cond: cond,
+        ibody: ibody,
+    };
+    Box::new(node)
+}
+
+fn new_node_if_else(cond: Box<Node>, ibody: Box<Node>, ebody: Box<Node>) -> Box<Node> {
+    let node = Node::IfElse {
+        cond: cond,
+        ibody: ibody,
+        ebody: ebody,
     };
     Box::new(node)
 }
@@ -253,9 +279,19 @@ fn expr(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
 
 fn stmt(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
     let node: Box<Node>;
-    if tokens.expect_ret() {
+    if tokens.expect_rsv("return") {
         let rhs = expr(tokens)?;
         node = new_node_ret(rhs);
+    } else if tokens.expect_rsv("if") {
+        let cond = expr(tokens)?;
+        let ibody = stmt(tokens)?;
+        if tokens.expect_rsv("else") {
+            let ebody = stmt(tokens)?;
+            node = new_node_if_else(cond, ibody, ebody);
+        } else {
+            node = new_node_if(cond, ibody);
+        }
+        return Ok(node);
     } else {
         node = expr(tokens)?;
     }
