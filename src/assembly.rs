@@ -126,9 +126,9 @@ fn gen_asm_node(f: &mut File, node: Box<Node>) -> Result<(), AsmError> {
             write!(f, "    je  .Lelse\n")?;
             gen_asm_node(f, ibody)?;
             write!(f, "    je  .Lend\n")?;
-            write!(f, ".Lelse\n")?;
+            write!(f, ".Lelse:\n")?;
             gen_asm_node(f, ebody)?;
-            write!(f, ".Lend\n")?;
+            write!(f, ".Lend:\n")?;
         },
     }
 
