@@ -38,14 +38,7 @@ pub enum TokenKind {
     TokenOp(String),
     TokenNum(u32),
     TokenVar(String),
-    TokenRet,
-    TokenIf,
-    TokenEls,
-    TokenFor,
-    TokenDo,
-    TokenWhl,
-    TokenBrk,
-    TokenCnt,
+    TokenRsv(String),
     TokenEnd,
 }
 
@@ -108,12 +101,16 @@ impl Tokens {
         }
     }
 
-    pub fn expect_ret(&mut self) -> bool {
+    pub fn expect_rsv(&mut self, expect: &str) -> bool {
         let cur_tok = &self.list[self.current];
         match &cur_tok.kind {
-            TokenRet => {
-                self.current += 1;
-                true
+            TokenRsv(word) => {
+                if word == expect {
+                    self.current += 1;
+                    true
+                } else {
+                    false
+                }
             },
             _ => false
         }
@@ -196,22 +193,15 @@ pub fn tokenize(formula: &str) -> Result<Vec<Token>, TokenError> {
                     let name = str::from_utf8(&tmp)
                         .unwrap()
                         .to_string();
-                    if name == "return".to_string() {
-                        tokens.push(Token::new(TokenRet, pos));
-                    } else if name == "if".to_string() {
-                        tokens.push(Token::new(TokenIf, pos));
-                    } else if name == "else".to_string() {
-                        tokens.push(Token::new(TokenEls, pos));
-                    } else if name == "for".to_string() {
-                        tokens.push(Token::new(TokenFor, pos));
-                    } else if name == "do".to_string() {
-                        tokens.push(Token::new(TokenDo, pos));
-                    } else if name == "while".to_string() {
-                        tokens.push(Token::new(TokenWhl, pos));
-                    } else if name == "break".to_string() {
-                        tokens.push(Token::new(TokenBrk, pos));
-                    } else if name == "continue".to_string() {
-                        tokens.push(Token::new(TokenCnt, pos));
+                    if name == "return"  .to_string() ||
+                       name == "if"      .to_string() ||
+                       name == "else"    .to_string() ||
+                       name == "for"     .to_string() ||
+                       name == "do"      .to_string() ||
+                       name == "while"   .to_string() ||
+                       name == "break"   .to_string() ||
+                       name == "continue".to_string() {
+                        tokens.push(Token::new(TokenRsv(name), pos));
                     } else {
                         tokens.push(Token::new(TokenVar(name), pos));
                     }
