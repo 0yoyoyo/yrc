@@ -277,20 +277,46 @@ fn expr(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
     assign(tokens)
 }
 
+fn if_else(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
+    let node: Box<Node>;
+
+    let cond = expr(tokens)?;
+
+    let mut ibody: Box<Node>;
+    if tokens.expect_op("{") {
+        ibody = stmt(tokens)?;
+        while !tokens.expect_op("}") {
+            ibody = stmt(tokens)?;
+        }
+    } else {
+        ibody = stmt(tokens)?;
+    }
+
+    if tokens.expect_rsv("else") {
+        let mut ebody: Box<Node>;
+        if tokens.expect_op("{") {
+            ebody = stmt(tokens)?;
+            while !tokens.expect_op("}") {
+                ebody = stmt(tokens)?;
+            }
+        } else {
+            ebody = stmt(tokens)?;
+        }
+        node = new_node_if_else(cond, ibody, ebody);
+    } else {
+        node = new_node_if(cond, ibody);
+    }
+
+    Ok(node)
+}
+
 fn stmt(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
     let node: Box<Node>;
     if tokens.expect_rsv("return") {
         let rhs = expr(tokens)?;
         node = new_node_ret(rhs);
     } else if tokens.expect_rsv("if") {
-        let cond = expr(tokens)?;
-        let ibody = stmt(tokens)?;
-        if tokens.expect_rsv("else") {
-            let ebody = stmt(tokens)?;
-            node = new_node_if_else(cond, ibody, ebody);
-        } else {
-            node = new_node_if(cond, ibody);
-        }
+        node = if_else(tokens)?;
         return Ok(node);
     } else {
         node = expr(tokens)?;
