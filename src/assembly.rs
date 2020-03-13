@@ -104,6 +104,9 @@ fn gen_asm_node(f: &mut File, node: Box<Node>) -> Result<(), AsmError> {
             write!(f, "    mov rax, [rax]\n")?;
             write!(f, "    push rax\n")?;
         },
+        Node::Function { name } => {
+            write!(f, "    call {}\n", name)?;
+        },
         Node::Block { nodes } => {
             let mut iter = nodes.into_iter();
             while let Some(node) = iter.next() {

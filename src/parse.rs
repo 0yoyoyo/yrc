@@ -66,6 +66,9 @@ pub enum Node {
     LocalVariable {
         offset: usize,
     },
+    Function {
+        name: String,
+    },
     Block {
         nodes: Vec<Box<Node>>,
     },
@@ -144,6 +147,13 @@ fn new_node_var(name: &str) -> Box<Node> {
     Box::new(node)
 }
 
+fn new_node_func(name: &str) -> Box<Node> {
+    let node = Node::Function {
+        name: name.to_string(),
+    };
+    Box::new(node)
+}
+
 fn new_node_block(nodes: Vec<Box<Node>>) -> Box<Node> {
     let node = Node::Block {
         nodes: nodes,
@@ -195,7 +205,18 @@ fn primary(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
             Err(ParseError::new(ParenExpected, tokens))
         }
     } else if let Some(var) = tokens.expect_var() {
-        Ok(new_node_var(var))
+        // It looks a little bad...
+        let var = &var.to_string().clone();
+        if tokens.expect_op("(") {
+            let node = new_node_func(var);
+            if tokens.expect_op(")") {
+                Ok(node)
+            } else {
+                Err(ParseError::new(ParenExpected, tokens))
+            }
+        } else {
+            Ok(new_node_var(var))
+        }
     } else {
         let num = tokens.expect_num()
             .ok_or(ParseError::new(NumberExpected, tokens))?;
