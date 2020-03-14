@@ -30,6 +30,14 @@ impl From<io::Error> for AsmError {
     }
 }
 
+fn gen_asm_block(f: &mut File, nodes: Vec<Box<Node>>) -> Result<(), AsmError> {
+    let mut iter = nodes.into_iter();
+    while let Some(node) = iter.next() {
+        gen_asm_node(f, node)?;
+    }
+    Ok(())
+}
+
 fn gen_asm_lval(f: &mut File, node: Box<Node>) -> Result<(), AsmError> {
     match *node {
         Node::LocalVariable { offset } => {
@@ -104,14 +112,24 @@ fn gen_asm_node(f: &mut File, node: Box<Node>) -> Result<(), AsmError> {
             write!(f, "    mov rax, [rax]\n")?;
             write!(f, "    push rax\n")?;
         },
-        Node::Function { name } => {
+        Node::Function { name, block } => {
+            write!(f, ".global {}\n", name)?;
+            write!(f, "{}:\n", name)?;
+
+            write!(f, "    push rbp\n")?;
+            write!(f, "    mov rbp, rsp\n")?;
+            write!(f, "    sub rsp, {}\n", 8 * get_lvar_num())?;
+
+            gen_asm_node(f, block)?;
+
+            write!(f, "\n")?;
+        },
+        Node::Call { name } => {
             write!(f, "    call {}\n", name)?;
+            write!(f, "    push rax\n")?;
         },
         Node::Block { nodes } => {
-            let mut iter = nodes.into_iter();
-            while let Some(node) = iter.next() {
-                gen_asm_node(f, node)?;
-            }
+            gen_asm_block(f, nodes)?;
         },
         Node::Return { rhs } => {
             gen_asm_node(f, rhs)?;
@@ -146,21 +164,10 @@ fn gen_asm_node(f: &mut File, node: Box<Node>) -> Result<(), AsmError> {
 
 pub fn gen_asm(f: &mut File, nodes: Vec<Box<Node>>) -> Result<(), AsmError> {
     write!(f, ".intel_syntax noprefix\n")?;
-    write!(f, ".global main\n")?;
-    write!(f, "main:\n")?;
-
-    write!(f, "    push rbp\n")?;
-    write!(f, "    mov rbp, rsp\n")?;
-    write!(f, "    sub rsp, {}\n", 8 * get_lvar_num())?;
 
     for node in nodes.into_iter() {
         gen_asm_node(f, node)?;
-        write!(f, "    pop rax\n")?;
     }
-
-    write!(f, "    mov rsp, rbp\n")?;
-    write!(f, "    pop rbp\n")?;
-    write!(f, "    ret\n")?;
 
     Ok(())
 }

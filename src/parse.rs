@@ -10,6 +10,7 @@ use ParseErrorKind::*;
 #[derive(Debug)]
 pub enum ParseErrorKind {
     NumberExpected,
+    FuncExpected,
     ParenExpected,
     ScolonExpected,
 }
@@ -34,6 +35,7 @@ impl fmt::Display for ParseError {
         write!(f, "{}^ ", " ".repeat(self.pos))?;
         match &self.error {
             NumberExpected => write!(f, "Number is expected here!"),
+            FuncExpected => write!(f, "Function is expected here!"),
             ParenExpected => write!(f, "Parentheses are not closed!"),
             ScolonExpected => write!(f, "Semicolon is needed!"),
         }
@@ -67,6 +69,10 @@ pub enum Node {
         offset: usize,
     },
     Function {
+        name: String,
+        block: Box<Node>,
+    },
+    Call {
         name: String,
     },
     Block {
@@ -147,8 +153,16 @@ fn new_node_var(name: &str) -> Box<Node> {
     Box::new(node)
 }
 
-fn new_node_func(name: &str) -> Box<Node> {
+fn new_node_func(name: &str, block: Box<Node>) -> Box<Node> {
     let node = Node::Function {
+        name: name.to_string(),
+        block: block,
+    };
+    Box::new(node)
+}
+
+fn new_node_call(name: &str) -> Box<Node> {
+    let node = Node::Call {
         name: name.to_string(),
     };
     Box::new(node)
@@ -208,7 +222,7 @@ fn primary(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
         // It looks a little bad...
         let var = &var.to_string().clone();
         if tokens.expect_op("(") {
-            let node = new_node_func(var);
+            let node = new_node_call(var);
             if tokens.expect_op(")") {
                 Ok(node)
             } else {
@@ -354,6 +368,25 @@ fn stmt(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
     } else if tokens.expect_rsv("if") {
         node = if_else(tokens)?;
         return Ok(node);
+    } else if tokens.expect_rsv("fn") {
+        if let Some(name) = tokens.expect_var() {
+            // It looks a little bad...
+            let name = &name.to_string().clone();
+            if !tokens.expect_op("(") {
+                return Err(ParseError::new(ParenExpected, tokens))
+            }
+            if !tokens.expect_op(")") {
+                return Err(ParseError::new(ParenExpected, tokens))
+            }
+            if !tokens.expect_op("{") {
+                return Err(ParseError::new(ParenExpected, tokens))
+            }
+            let block = block(tokens)?;
+            node = new_node_func(name, block);
+            return Ok(node);
+        } else {
+            return Err(ParseError::new(FuncExpected, tokens))
+        }
     } else {
         node = expr(tokens)?;
     }

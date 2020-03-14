@@ -200,7 +200,8 @@ pub fn tokenize(formula: &str) -> Result<Vec<Token>, TokenError> {
                        name == "do"      .to_string() ||
                        name == "while"   .to_string() ||
                        name == "break"   .to_string() ||
-                       name == "continue".to_string() {
+                       name == "continue".to_string() ||
+                       name == "fn"      .to_string() {
                         tokens.push(Token::new(TokenRsv(name), pos));
                     } else {
                         tokens.push(Token::new(TokenVar(name), pos));
