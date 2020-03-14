@@ -360,6 +360,26 @@ fn if_else(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
     Ok(node)
 }
 
+fn func(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
+    if let Some(name) = tokens.expect_var() {
+        // It looks a little bad...
+        let name = &name.to_string().clone();
+        if !tokens.expect_op("(") {
+            return Err(ParseError::new(ParenExpected, tokens))
+        }
+        if !tokens.expect_op(")") {
+            return Err(ParseError::new(ParenExpected, tokens))
+        }
+        if !tokens.expect_op("{") {
+            return Err(ParseError::new(ParenExpected, tokens))
+        }
+        let block = block(tokens)?;
+        Ok(new_node_func(name, block))
+    } else {
+        Err(ParseError::new(FuncExpected, tokens))
+    }
+}
+
 fn stmt(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
     let node: Box<Node>;
     if tokens.expect_rsv("return") {
@@ -369,24 +389,8 @@ fn stmt(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
         node = if_else(tokens)?;
         return Ok(node);
     } else if tokens.expect_rsv("fn") {
-        if let Some(name) = tokens.expect_var() {
-            // It looks a little bad...
-            let name = &name.to_string().clone();
-            if !tokens.expect_op("(") {
-                return Err(ParseError::new(ParenExpected, tokens))
-            }
-            if !tokens.expect_op(")") {
-                return Err(ParseError::new(ParenExpected, tokens))
-            }
-            if !tokens.expect_op("{") {
-                return Err(ParseError::new(ParenExpected, tokens))
-            }
-            let block = block(tokens)?;
-            node = new_node_func(name, block);
-            return Ok(node);
-        } else {
-            return Err(ParseError::new(FuncExpected, tokens))
-        }
+        node = func(tokens)?;
+        return Ok(node);
     } else {
         node = expr(tokens)?;
     }
