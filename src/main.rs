@@ -160,66 +160,116 @@ mod tests {
 
     #[test]
     fn calc_unary() {
-        check_return_num("0;", 0);
-        check_return_num("123;", 123);
-        check_return_num("(123);", 123);
+        check_return_num("fn main() { return 0; }", 0);
+        check_return_num("fn main() { return 123; }", 123);
+        check_return_num("fn main() { return (123); }", 123);
     }
 
     #[test]
     fn calc_binary() {
-        check_return_num("1 + 2;", 3);
-        check_return_num("3 - 2;", 1);
-        check_return_num("2 * 3;", 6);
-        check_return_num("6 / 2;", 3);
-        check_return_num("7 == 7;", 1);
-        check_return_num("7 == 8;", 0);
-        check_return_num("7 != 7;", 0);
-        check_return_num("7 != 8;", 1);
-        check_return_num("7 < 8;", 1);
-        check_return_num("7 <= 7;", 1);
-        check_return_num("7 <= 8;", 1);
-        check_return_num("7 < 7;", 0);
-        check_return_num("7 <= 6;", 0);
-        check_return_num("7 <= 6;", 0);
-        check_return_num("8 > 7;", 1);
-        check_return_num("7 >= 7;", 1);
-        check_return_num("8 >= 7;", 1);
-        check_return_num("7 > 7;", 0);
-        check_return_num("6 >= 7;", 0);
-        check_return_num("6 >= 7;", 0);
+        check_return_num("fn main() { return 1 + 2; }", 3);
+        check_return_num("fn main() { return 3 - 2; }", 1);
+        check_return_num("fn main() { return 2 * 3; }", 6);
+        check_return_num("fn main() { return 6 / 2; }", 3);
+        check_return_num("fn main() { return 7 == 7; }", 1);
+        check_return_num("fn main() { return 7 == 8; }", 0);
+        check_return_num("fn main() { return 7 != 7; }", 0);
+        check_return_num("fn main() { return 7 != 8; }", 1);
+        check_return_num("fn main() { return 7 < 8; }", 1);
+        check_return_num("fn main() { return 7 <= 7; }", 1);
+        check_return_num("fn main() { return 7 <= 8; }", 1);
+        check_return_num("fn main() { return 7 < 7; }", 0);
+        check_return_num("fn main() { return 7 <= 6; }", 0);
+        check_return_num("fn main() { return 7 <= 6; }", 0);
+        check_return_num("fn main() { return 8 > 7; }", 1);
+        check_return_num("fn main() { return 7 >= 7; }", 1);
+        check_return_num("fn main() { return 8 >= 7; }", 1);
+        check_return_num("fn main() { return 7 > 7; }", 0);
+        check_return_num("fn main() { return 6 >= 7; }", 0);
+        check_return_num("fn main() { return 6 >= 7; }", 0);
     }
 
     #[test]
     fn calc_combination() {
-        check_return_num("-1 + 2;", 1);
-        check_return_num("-(1 + 2) + 4;", 1);
-        check_return_num("2 * 3 + 6 / 2;", 9);
-        check_return_num("2 * (3 + 6) / 3;", 6);
+        check_return_num("fn main() { return -1 + 2; }", 1);
+        check_return_num("fn main() { return -(1 + 2) + 4; }", 1);
+        check_return_num("fn main() { return 2 * 3 + 6 / 2; }", 9);
+        check_return_num("fn main() { return 2 * (3 + 6) / 3; }", 6);
     }
 
     #[test]
     fn calc_local_variable() {
-        check_return_num("a = 1; a;", 1);
-        check_return_num("z = 1; z;", 1);
-        check_return_num("n = 10 + 2; n * 2;", 24);
-        check_return_num("abc = 2; def = 3; abc + def;", 5);
-        check_return_num("abc = 2; def = abc + 3; def;", 5);
+        check_return_num("fn main() {\
+                              a = 1;\
+                              return a;\
+                          }", 1);
+        check_return_num("fn main() {\
+                              z = 1;\
+                              return z;\
+                          }", 1);
+        check_return_num("fn main() {\
+                              n = 10 + 2;\
+                              return n * 2;\
+                          }", 24);
+        check_return_num("fn main() {\
+                              abc = 2;\
+                              def = 3;\
+                              return abc + def;\
+                          }", 5);
+        check_return_num("fn main() {\
+                              abc = 2;\
+                              def = abc + 3;\
+                              return def;\
+                          }", 5);
     }
 
     #[test]
     fn calc_if_else() {
-        check_return_num("a = 1; if 1 == 1 { a = 2; } else { a = 3; } return a;", 2);
-        check_return_num("a = 1; if 1 == 2 { a = 2; } else { a = 3; } return a;", 3);
-        check_return_num("a = 1; if 1 == 1 { b = 1; a = b + 1; } return a;", 2);
+        check_return_num("fn main() {\
+                              a = 1;\
+                              if 1 == 1 {\
+                                  a = 2;\
+                              } else {\
+                                  a = 3;\
+                              }\
+                              return a;\
+                          }", 2);
+        check_return_num("fn main() {\
+                              a = 1;\
+                              if 1 == 2 {\
+                                  a = 2;\
+                              } else {\
+                                  a = 3;\
+                              }\
+                              return a;\
+                          }", 3);
+        check_return_num("fn main() {\
+                              a = 1;\
+                              if 1 == 1 {\
+                                  b = 1;\
+                                  a = b + 1;\
+                              }\
+                              return a;\
+                          }", 2);
+    }
+
+    #[test]
+    fn calc_func() {
+        check_return_num("fn foo() {\
+                              return 3;\
+                          }\
+                          fn main() {\
+                              return foo();\
+                          }", 3);
     }
 
     #[test]
     fn check_format() {
-        check_return_num("1+2+3;", 6);
-        check_return_num(" 1 + 2 + 3 ;", 6);
-        check_return_num("1 +  2   +    3;", 6);
-        check_return_num("(1+2)+3;", 6);
-        check_return_num("1+(2+3);", 6);
-        check_return_num("(1+2+3);", 6);
+        check_return_num("fn main() { return 1+2+3; }", 6);
+        check_return_num("fn main() { return  1 + 2 + 3 ; }", 6);
+        check_return_num("fn main() { return 1 +  2   +    3; }", 6);
+        check_return_num("fn main() { return (1+2)+3; }", 6);
+        check_return_num("fn main() { return 1+(2+3); }", 6);
+        check_return_num("fn main() { return (1+2+3); }", 6);
     }
 }
