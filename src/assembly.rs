@@ -112,7 +112,7 @@ fn gen_asm_node(f: &mut File, node: Box<Node>) -> Result<(), AsmError> {
             write!(f, "    mov rax, [rax]\n")?;
             write!(f, "    push rax\n")?;
         },
-        Node::Function { name, block } => {
+        Node::Function { name, args, block } => {
             write!(f, ".global {}\n", name)?;
             write!(f, "{}:\n", name)?;
 
@@ -120,11 +120,27 @@ fn gen_asm_node(f: &mut File, node: Box<Node>) -> Result<(), AsmError> {
             write!(f, "    mov rbp, rsp\n")?;
             write!(f, "    sub rsp, {}\n", 8 * get_lvar_num())?;
 
+            let mut iter = args.into_iter().enumerate();
+            let arg_regs = ["rdi", "rsi", "rdx", "rcx", "r8", "r9"];
+            while let Some((cnt, node)) = iter.next() {
+                gen_asm_lval(f, node)?;
+                write!(f, "    pop rax\n")?;
+                write!(f, "    mov [rax], {}\n", arg_regs[cnt])?;
+            }
+
             gen_asm_node(f, block)?;
 
             write!(f, "\n")?;
         },
-        Node::Call { name } => {
+        Node::Call { name, args } => {
+            let mut iter = args.into_iter().enumerate();
+            let arg_regs = ["rdi", "rsi", "rdx", "rcx", "r8", "r9"];
+            while let Some((cnt, node)) = iter.next() {
+                gen_asm_node(f, node)?;
+                write!(f, "    pop rax\n")?;
+                write!(f, "    mov {}, rax\n", arg_regs[cnt])?;
+            }
+
             write!(f, "    call {}\n", name)?;
             write!(f, "    push rax\n")?;
         },

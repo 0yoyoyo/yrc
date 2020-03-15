@@ -162,7 +162,7 @@ pub fn tokenize(formula: &str) -> Result<Vec<Token>, TokenError> {
             b'*' | b'/' |
             b'(' | b')' |
             b'{' | b'}' |
-            b';' => {
+            b',' | b';' => {
                 let op = str::from_utf8(&bytes[cur].to_ne_bytes())
                     .unwrap()
                     .to_string();

@@ -281,6 +281,18 @@ mod tests {
                               b = 2;\
                               return a + b + foo();\
                           }", 10);
+        check_return_num("fn foo(a) {\
+                              return a * 2;\
+                          }\
+                          fn main() {\
+                              return foo(2);\
+                          }", 4);
+        check_return_num("fn foo(a, b, c, d, e, f) {\
+                              return (a + b + c + d + e + f) * 2;\
+                          }\
+                          fn main() {\
+                              return foo(1, 2, 3, 4, 5, 6);\
+                          }", 42);
     }
 
     #[test]
