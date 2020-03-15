@@ -261,6 +261,26 @@ mod tests {
                           fn main() {\
                               return foo();\
                           }", 3);
+        check_return_num("fn foo() {\
+                              c = 3;\
+                              d = 4;\
+                              return c + d;\
+                          }\
+                          fn main() {\
+                              a = 1;\
+                              b = 2;\
+                              return a + b + foo();\
+                          }", 10);
+        check_return_num("fn foo() {\
+                              a = 3;\
+                              b = 4;\
+                              return a + b;\
+                          }\
+                          fn main() {\
+                              a = 1;\
+                              b = 2;\
+                              return a + b + foo();\
+                          }", 10);
     }
 
     #[test]

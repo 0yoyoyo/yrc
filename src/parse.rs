@@ -129,7 +129,7 @@ fn new_node_num(val: u32) -> Box<Node> {
 fn new_node_var(name: &str) -> Box<Node> {
     let list = LVAR_LIST.with(|v| v.clone());
     // Set default offset as inputting new variable.
-    let mut offset = 8 * list.borrow().len();
+    let mut offset = 8 * (list.borrow().len() + 1);
     let mut i = 0;
 
     while let Some(lv) = list.borrow().get(i) {
@@ -142,7 +142,7 @@ fn new_node_var(name: &str) -> Box<Node> {
     if i == list.borrow().len(){
         let new = Lvar {
             name: name.to_string(),
-            offset: 8 * list.borrow().len(),
+            offset: 8 * (list.borrow().len() + 1),
         };
         list.borrow_mut().push(new);
     }
