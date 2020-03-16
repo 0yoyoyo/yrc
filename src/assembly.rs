@@ -7,6 +7,7 @@ use std::io::prelude::*;
 
 use super::parse::Node;
 use super::parse::NodeKind::*;
+use super::parse::UnaryOpKind::*;
 use super::parse::get_lvar_num;
 
 use AsmError::*;
@@ -120,6 +121,19 @@ fn gen_asm_node(f: &mut File, node: Box<Node>) -> Result<(), AsmError> {
                 },
             }
             write!(f, "    push rax\n")?;
+        },
+        Node::UnaryOperator { kind, node } => {
+            match kind {
+                UnaryOpRf => {
+                    gen_asm_lval(f, node)?;
+                }
+                UnaryOpDrf => {
+                    gen_asm_node(f, node)?;
+                    write!(f, "    pop rax\n")?;
+                    write!(f, "    mov rax, [rax]\n")?;
+                    write!(f, "    push rax\n")?;
+                }
+            }
         },
         Node::LocalVariable { offset: _ } => {
             gen_asm_lval(f, node)?;

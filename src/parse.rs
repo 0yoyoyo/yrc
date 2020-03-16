@@ -5,6 +5,7 @@ use std::rc::Rc;
 use super::token::Tokens;
 
 use NodeKind::*;
+use UnaryOpKind::*;
 use ParseErrorKind::*;
 
 #[derive(Debug)]
@@ -59,12 +60,22 @@ pub enum NodeKind {
     NodeAsn,
 }
 
+#[derive(Debug, PartialEq)]
+pub enum UnaryOpKind {
+    UnaryOpRf,
+    UnaryOpDrf,
+}
+
 #[derive(Debug)]
 pub enum Node {
     Operator {
         kind: NodeKind,
         lhs: Box<Node>,
         rhs: Box<Node>,
+    },
+    UnaryOperator {
+        kind: UnaryOpKind,
+        node: Box<Node>,
     },
     Number {
         val: u32,
@@ -125,6 +136,14 @@ fn new_node(kind: NodeKind, lhs: Box<Node>, rhs: Box<Node>) -> Box<Node> {
         kind: kind,
         lhs: lhs,
         rhs: rhs,
+    };
+    Box::new(node)
+}
+
+fn new_node_uop(kind: UnaryOpKind, node: Box<Node>) -> Box<Node> {
+    let node = Node::UnaryOperator {
+        kind: kind,
+        node: node,
     };
     Box::new(node)
 }
@@ -264,7 +283,13 @@ fn primary(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
 }
 
 fn unary(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
-    if tokens.expect_op("-") {
+    if tokens.expect_op("&") {
+        unary(tokens)
+            .map(|node| new_node_uop(UnaryOpRf, node))
+    } else if tokens.expect_op("*") {
+        unary(tokens)
+            .map(|node| new_node_uop(UnaryOpDrf, node))
+    } else if tokens.expect_op("-") {
         primary(tokens)
             .map(|rhs| new_node(NodeSub, new_node_num(0), rhs))
     } else {
