@@ -11,8 +11,10 @@ use ParseErrorKind::*;
 pub enum ParseErrorKind {
     NumberExpected,
     FuncExpected,
+    ArgExpected,
     ParenExpected,
     ScolonExpected,
+    BlockExpected,
 }
 
 #[derive(Debug)]
@@ -36,8 +38,10 @@ impl fmt::Display for ParseError {
         match &self.error {
             NumberExpected => write!(f, "Number is expected here!"),
             FuncExpected => write!(f, "Function is expected here!"),
+            ArgExpected => write!(f, "Arguments are needed!"),
             ParenExpected => write!(f, "Parentheses are not closed!"),
             ScolonExpected => write!(f, "Semicolon is needed!"),
+            BlockExpected => write!(f, "Block is expected here!"),
         }
     }
 }
@@ -360,13 +364,15 @@ fn func(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
         let name = &name.to_string().clone();
 
         if !tokens.expect_op("(") {
-            return Err(ParseError::new(ParenExpected, tokens));
+            return Err(ParseError::new(ArgExpected, tokens));
         }
 
         let mut args: Vec<Box<Node>> = Vec::new();
         while !tokens.expect_op(")") {
             if let Some(name) = tokens.expect_idt() {
                 args.push(new_node_var(name));
+            } else {
+                return Err(ParseError::new(ParenExpected, tokens));
             }
             if tokens.expect_op(",") {
                 continue;
@@ -374,7 +380,7 @@ fn func(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
         }
 
         if !tokens.expect_op("{") {
-            return Err(ParseError::new(ParenExpected, tokens));
+            return Err(ParseError::new(BlockExpected, tokens));
         }
         let block = block(tokens)?;
 
