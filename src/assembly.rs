@@ -173,6 +173,16 @@ fn gen_asm_node(f: &mut File, node: Box<Node>) -> Result<(), AsmError> {
             gen_asm_node(f, ebody)?;
             write!(f, ".Lend:\n")?;
         },
+        Node::While { cond, body } => {
+            write!(f, ".Lbegin:\n")?;
+            gen_asm_node(f, cond)?;
+            write!(f, "    pop rax\n")?;
+            write!(f, "    cmp rax, 0\n")?;
+            write!(f, "    je  .Lend\n")?;
+            gen_asm_node(f, body)?;
+            write!(f, "    jmp  .Lbegin\n")?;
+            write!(f, ".Lend:\n")?;
+        },
     }
 
     Ok(())

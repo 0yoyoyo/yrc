@@ -224,7 +224,7 @@ mod tests {
     }
 
     #[test]
-    fn calc_if_else() {
+    fn calc_control() {
         check_return_num("fn main() {\
                               a = 1;\
                               if 1 == 1 {\
@@ -251,6 +251,13 @@ mod tests {
                               }\
                               return a;\
                           }", 2);
+        check_return_num("fn main() {\
+                              a = 1;\
+                              while a != 10 {\
+                                  a = a + 1;\
+                              }\
+                              return a;\
+                          }", 10);
     }
 
     #[test]

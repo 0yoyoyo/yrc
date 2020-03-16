@@ -92,6 +92,10 @@ pub enum Node {
         ibody: Box<Node>,
         ebody: Box<Node>,
     },
+    While {
+        cond: Box<Node>,
+        body: Box<Node>,
+    },
 }
 
 struct Lvar {
@@ -199,6 +203,14 @@ fn new_node_if_else(cond: Box<Node>, ibody: Box<Node>, ebody: Box<Node>) -> Box<
         cond: cond,
         ibody: ibody,
         ebody: ebody,
+    };
+    Box::new(node)
+}
+
+fn new_node_whl(cond: Box<Node>, body: Box<Node>) -> Box<Node> {
+    let node = Node::While {
+        cond: cond,
+        body: body,
     };
     Box::new(node)
 }
@@ -369,6 +381,19 @@ fn if_else(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
     Ok(node)
 }
 
+fn whl(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
+    let cond = expr(tokens)?;
+
+    let body: Box<Node>;
+    if tokens.expect_op("{") {
+        body = block(tokens)?;
+    } else {
+        body = stmt(tokens)?;
+    }
+
+    Ok(new_node_whl(cond, body))
+}
+
 fn func(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
     if let Some(name) = tokens.expect_var() {
         // It looks a little bad...
@@ -406,6 +431,9 @@ fn stmt(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
         node = new_node_ret(rhs);
     } else if tokens.expect_rsv("if") {
         node = if_else(tokens)?;
+        return Ok(node);
+    } else if tokens.expect_rsv("while") {
+        node = whl(tokens)?;
         return Ok(node);
     } else if tokens.expect_rsv("fn") {
         node = func(tokens)?;
