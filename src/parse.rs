@@ -68,6 +68,9 @@ pub enum Node {
     LocalVariable {
         offset: usize,
     },
+    Block {
+        nodes: Vec<Box<Node>>,
+    },
     Function {
         name: String,
         args: Vec<Box<Node>>,
@@ -76,12 +79,6 @@ pub enum Node {
     Call {
         name: String,
         args: Vec<Box<Node>>,
-    },
-    Block {
-        nodes: Vec<Box<Node>>,
-    },
-    Return {
-        rhs: Box<Node>,
     },
     If {
         cond: Box<Node>,
@@ -95,6 +92,9 @@ pub enum Node {
     While {
         cond: Box<Node>,
         body: Box<Node>,
+    },
+    Return {
+        rhs: Box<Node>,
     },
 }
 
@@ -159,6 +159,13 @@ fn new_node_var(name: &str) -> Box<Node> {
     Box::new(node)
 }
 
+fn new_node_block(nodes: Vec<Box<Node>>) -> Box<Node> {
+    let node = Node::Block {
+        nodes: nodes,
+    };
+    Box::new(node)
+}
+
 fn new_node_func(name: &str, args: Vec<Box<Node>>, block: Box<Node>) -> Box<Node> {
     let node = Node::Function {
         name: name.to_string(),
@@ -172,20 +179,6 @@ fn new_node_call(name: &str, args: Vec<Box<Node>>) -> Box<Node> {
     let node = Node::Call {
         name: name.to_string(),
         args: args,
-    };
-    Box::new(node)
-}
-
-fn new_node_block(nodes: Vec<Box<Node>>) -> Box<Node> {
-    let node = Node::Block {
-        nodes: nodes,
-    };
-    Box::new(node)
-}
-
-fn new_node_ret(rhs: Box<Node>) -> Box<Node> {
-    let node = Node::Return {
-        rhs: rhs,
     };
     Box::new(node)
 }
@@ -215,6 +208,13 @@ fn new_node_whl(cond: Box<Node>, body: Box<Node>) -> Box<Node> {
     Box::new(node)
 }
 
+fn new_node_ret(rhs: Box<Node>) -> Box<Node> {
+    let node = Node::Return {
+        rhs: rhs,
+    };
+    Box::new(node)
+}
+
 fn block(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
     let mut nodes: Vec<Box<Node>> = Vec::new();
     while !tokens.expect_op("}") {
@@ -234,9 +234,9 @@ fn primary(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
         } else {
             Err(ParseError::new(ParenExpected, tokens))
         }
-    } else if let Some(var) = tokens.expect_var() {
+    } else if let Some(name) = tokens.expect_idt() {
         // It looks a little bad...
-        let var = &var.to_string().clone();
+        let name = &name.to_string().clone();
 
         if tokens.expect_op("(") {
             let mut args: Vec<Box<Node>> = Vec::new();
@@ -248,9 +248,9 @@ fn primary(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
                 }
             }
 
-            Ok(new_node_call(var, args))
+            Ok(new_node_call(name, args))
         } else {
-            Ok(new_node_var(var))
+            Ok(new_node_var(name))
         }
     } else {
         let num = tokens.expect_num()
@@ -354,6 +354,36 @@ fn expr(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
     assign(tokens)
 }
 
+fn func(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
+    if let Some(name) = tokens.expect_idt() {
+        // It looks a little bad...
+        let name = &name.to_string().clone();
+
+        if !tokens.expect_op("(") {
+            return Err(ParseError::new(ParenExpected, tokens));
+        }
+
+        let mut args: Vec<Box<Node>> = Vec::new();
+        while !tokens.expect_op(")") {
+            if let Some(name) = tokens.expect_idt() {
+                args.push(new_node_var(name));
+            }
+            if tokens.expect_op(",") {
+                continue;
+            }
+        }
+
+        if !tokens.expect_op("{") {
+            return Err(ParseError::new(ParenExpected, tokens));
+        }
+        let block = block(tokens)?;
+
+        Ok(new_node_func(name, args, block))
+    } else {
+        Err(ParseError::new(FuncExpected, tokens))
+    }
+}
+
 fn ifel(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
     let node: Box<Node>;
 
@@ -394,50 +424,20 @@ fn whl(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
     Ok(new_node_whl(cond, body))
 }
 
-fn func(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
-    if let Some(name) = tokens.expect_var() {
-        // It looks a little bad...
-        let name = &name.to_string().clone();
-
-        if !tokens.expect_op("(") {
-            return Err(ParseError::new(ParenExpected, tokens));
-        }
-
-        let mut args: Vec<Box<Node>> = Vec::new();
-        while !tokens.expect_op(")") {
-            if let Some(var) = tokens.expect_var() {
-                args.push(new_node_var(var));
-            }
-            if tokens.expect_op(",") {
-                continue;
-            }
-        }
-
-        if !tokens.expect_op("{") {
-            return Err(ParseError::new(ParenExpected, tokens));
-        }
-        let block = block(tokens)?;
-
-        Ok(new_node_func(name, args, block))
-    } else {
-        Err(ParseError::new(FuncExpected, tokens))
-    }
-}
-
 fn stmt(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
     let node: Box<Node>;
-    if tokens.expect_rsv("return") {
-        let rhs = expr(tokens)?;
-        node = new_node_ret(rhs);
+    if tokens.expect_rsv("fn") {
+        node = func(tokens)?;
+        return Ok(node);
     } else if tokens.expect_rsv("if") {
         node = ifel(tokens)?;
         return Ok(node);
     } else if tokens.expect_rsv("while") {
         node = whl(tokens)?;
         return Ok(node);
-    } else if tokens.expect_rsv("fn") {
-        node = func(tokens)?;
-        return Ok(node);
+    } else if tokens.expect_rsv("return") {
+        let rhs = expr(tokens)?;
+        node = new_node_ret(rhs);
     } else {
         node = expr(tokens)?;
     }

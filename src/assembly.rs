@@ -127,6 +127,9 @@ fn gen_asm_node(f: &mut File, node: Box<Node>) -> Result<(), AsmError> {
             write!(f, "    mov rax, [rax]\n")?;
             write!(f, "    push rax\n")?;
         },
+        Node::Block { nodes } => {
+            gen_asm_block(f, nodes)?;
+        },
         Node::Function { name, args, block } => {
             write!(f, ".global {}\n", name)?;
             write!(f, "{}:\n", name)?;
@@ -159,16 +162,6 @@ fn gen_asm_node(f: &mut File, node: Box<Node>) -> Result<(), AsmError> {
             write!(f, "    call {}\n", name)?;
             write!(f, "    push rax\n")?;
         },
-        Node::Block { nodes } => {
-            gen_asm_block(f, nodes)?;
-        },
-        Node::Return { rhs } => {
-            gen_asm_node(f, rhs)?;
-            write!(f, "    pop rax\n")?;
-            write!(f, "    mov rsp, rbp\n")?;
-            write!(f, "    pop rbp\n")?;
-            write!(f, "    ret\n")?;
-        },
         Node::If { cond, ibody } => {
             let lcnt = get_label_count();
             gen_asm_node(f, cond)?;
@@ -200,6 +193,13 @@ fn gen_asm_node(f: &mut File, node: Box<Node>) -> Result<(), AsmError> {
             gen_asm_node(f, body)?;
             write!(f, "    jmp  .Lbegin{}\n", lcnt)?;
             write!(f, ".Lend{}:\n", lcnt)?;
+        },
+        Node::Return { rhs } => {
+            gen_asm_node(f, rhs)?;
+            write!(f, "    pop rax\n")?;
+            write!(f, "    mov rsp, rbp\n")?;
+            write!(f, "    pop rbp\n")?;
+            write!(f, "    ret\n")?;
         },
     }
 

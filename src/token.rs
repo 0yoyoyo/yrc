@@ -37,7 +37,7 @@ impl fmt::Display for TokenError {
 pub enum TokenKind {
     TokenOp(String),
     TokenNum(u32),
-    TokenVar(String),
+    TokenIdt(String),
     TokenRsv(String),
     TokenEnd,
 }
@@ -90,12 +90,12 @@ impl Tokens {
         }
     }
 
-    pub fn expect_var(&mut self) -> Option<&str> {
+    pub fn expect_idt(&mut self) -> Option<&str> {
         let cur_tok = &self.list[self.current];
         match &cur_tok.kind {
-            TokenVar(var) => {
+            TokenIdt(name) => {
                 self.current += 1;
-                Some(var.as_str())
+                Some(name.as_str())
             },
             _ => None
         }
@@ -193,17 +193,17 @@ pub fn tokenize(formula: &str) -> Result<Vec<Token>, TokenError> {
                     let name = str::from_utf8(&tmp)
                         .unwrap()
                         .to_string();
-                    if name == "return"  .to_string() ||
+                    if name == "fn"      .to_string() ||
                        name == "if"      .to_string() ||
                        name == "else"    .to_string() ||
                        name == "for"     .to_string() ||
                        name == "while"   .to_string() ||
                        name == "break"   .to_string() ||
                        name == "continue".to_string() ||
-                       name == "fn"      .to_string() {
+                       name == "return"  .to_string() {
                         tokens.push(Token::new(TokenRsv(name), pos));
                     } else {
-                        tokens.push(Token::new(TokenVar(name), pos));
+                        tokens.push(Token::new(TokenIdt(name), pos));
                     }
                     tmp.clear();
                 }
