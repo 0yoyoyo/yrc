@@ -253,6 +253,22 @@ mod tests {
                           }", 2);
         check_return_num("fn main() {\
                               a = 1;\
+                              if 1 == 1 {\
+                                  a = a + 1;\
+                              }\
+                              if 1 == 2 {\
+                                  a = a + 1;\
+                              }\
+                              if 2 == 2 {\
+                                  a = a + 1;\
+                                  if 3 == 3 {\
+                                      a = a + 1;\
+                                  }\
+                              }\
+                              return a;\
+                          }", 4);
+        check_return_num("fn main() {\
+                              a = 1;\
                               while a != 10 {\
                                   a = a + 1;\
                               }\

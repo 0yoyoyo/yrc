@@ -1,5 +1,7 @@
 use std::fmt;
 use std::io;
+use std::cell::RefCell;
+use std::rc::Rc;
 use std::fs::File;
 use std::io::prelude::*;
 
@@ -28,6 +30,19 @@ impl From<io::Error> for AsmError {
     fn from(e: io::Error) -> Self {
         AsmError::Io(e)
     }
+}
+
+thread_local!(
+    static LABEL_COUNT: Rc<RefCell<usize>> = {
+        Rc::new(RefCell::new(0))
+    }
+);
+
+pub fn get_label_count() -> usize {
+    let cnt = LABEL_COUNT.with(|c| c.clone());
+    let cnt_copy = cnt.borrow().clone();
+    *cnt.borrow_mut() += 1;
+    cnt_copy
 }
 
 fn gen_asm_block(f: &mut File, nodes: Vec<Box<Node>>) -> Result<(), AsmError> {
@@ -155,33 +170,36 @@ fn gen_asm_node(f: &mut File, node: Box<Node>) -> Result<(), AsmError> {
             write!(f, "    ret\n")?;
         },
         Node::If { cond, ibody } => {
+            let lcnt = get_label_count();
             gen_asm_node(f, cond)?;
             write!(f, "    pop rax\n")?;
             write!(f, "    cmp rax, 0\n")?;
-            write!(f, "    je  .Lend\n")?;
+            write!(f, "    je  .Lend{}\n", lcnt)?;
             gen_asm_node(f, ibody)?;
-            write!(f, ".Lend:\n")?;
+            write!(f, ".Lend{}:\n", lcnt)?;
         },
         Node::IfElse { cond, ibody, ebody } => {
+            let lcnt = get_label_count();
             gen_asm_node(f, cond)?;
             write!(f, "    pop rax\n")?;
             write!(f, "    cmp rax, 0\n")?;
-            write!(f, "    je  .Lelse\n")?;
+            write!(f, "    je  .Lelse{}\n", lcnt)?;
             gen_asm_node(f, ibody)?;
-            write!(f, "    jmp  .Lend\n")?;
-            write!(f, ".Lelse:\n")?;
+            write!(f, "    jmp  .Lend{}\n", lcnt)?;
+            write!(f, ".Lelse{}:\n", lcnt)?;
             gen_asm_node(f, ebody)?;
-            write!(f, ".Lend:\n")?;
+            write!(f, ".Lend{}:\n", lcnt)?;
         },
         Node::While { cond, body } => {
-            write!(f, ".Lbegin:\n")?;
+            let lcnt = get_label_count();
+            write!(f, ".Lbegin{}:\n", lcnt)?;
             gen_asm_node(f, cond)?;
             write!(f, "    pop rax\n")?;
             write!(f, "    cmp rax, 0\n")?;
-            write!(f, "    je  .Lend\n")?;
+            write!(f, "    je  .Lend{}\n", lcnt)?;
             gen_asm_node(f, body)?;
-            write!(f, "    jmp  .Lbegin\n")?;
-            write!(f, ".Lend:\n")?;
+            write!(f, "    jmp  .Lbegin{}\n", lcnt)?;
+            write!(f, ".Lend{}:\n", lcnt)?;
         },
     }
 
