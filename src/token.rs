@@ -197,7 +197,6 @@ pub fn tokenize(formula: &str) -> Result<Vec<Token>, TokenError> {
                        name == "if"      .to_string() ||
                        name == "else"    .to_string() ||
                        name == "for"     .to_string() ||
-                       name == "do"      .to_string() ||
                        name == "while"   .to_string() ||
                        name == "break"   .to_string() ||
                        name == "continue".to_string() ||
