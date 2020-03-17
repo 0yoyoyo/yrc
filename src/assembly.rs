@@ -6,7 +6,7 @@ use std::fs::File;
 use std::io::prelude::*;
 
 use super::parse::Node;
-use super::parse::NodeKind::*;
+use super::parse::BinaryOpKind::*;
 use super::parse::UnaryOpKind::*;
 use super::parse::get_lvar_num;
 
@@ -71,8 +71,8 @@ fn gen_asm_node(f: &mut File, node: Box<Node>) -> Result<(), AsmError> {
         Node::Number { val } => {
             write!(f, "    push {}\n", val)?;
         },
-        Node::Operator { kind, lhs, rhs } => {
-            if kind == NodeAsn {
+        Node::BinaryOperator { kind, lhs, rhs } => {
+            if kind == BinaryOpAsn {
                 gen_asm_lval(f, lhs)?;
             } else {
                 gen_asm_node(f, lhs)?;
@@ -81,40 +81,40 @@ fn gen_asm_node(f: &mut File, node: Box<Node>) -> Result<(), AsmError> {
             write!(f, "    pop rdi\n")?;
             write!(f, "    pop rax\n")?;
             match kind {
-                NodeAdd => {
+                BinaryOpAdd => {
                     write!(f, "    add rax, rdi\n")?;
                 },
-                NodeSub => {
+                BinaryOpSub => {
                     write!(f, "    sub rax, rdi\n")?;
                 },
-                NodeMul => {
+                BinaryOpMul => {
                     write!(f, "    imul rax, rdi\n")?;
                 },
-                NodeDiv => {
+                BinaryOpDiv => {
                     write!(f, "    cqo\n")?;
                     write!(f, "    idiv rdi\n")?;
                 },
-                NodeEq => {
+                BinaryOpEq => {
                     write!(f, "    cmp rax, rdi\n")?;
                     write!(f, "    sete al\n")?;
                     write!(f, "    movzb rax, al\n")?;
                 },
-                NodeNe => {
+                BinaryOpNe => {
                     write!(f, "    cmp rax, rdi\n")?;
                     write!(f, "    setne al\n")?;
                     write!(f, "    movzb rax, al\n")?;
                 },
-                NodeGr => {
+                BinaryOpGr => {
                     write!(f, "    cmp rax, rdi\n")?;
                     write!(f, "    setl al\n")?;
                     write!(f, "    movzb rax, al\n")?;
                 },
-                NodeGe => {
+                BinaryOpGe => {
                     write!(f, "    cmp rax, rdi\n")?;
                     write!(f, "    setle al\n")?;
                     write!(f, "    movzb rax, al\n")?;
                 },
-                NodeAsn => {
+                BinaryOpAsn => {
                     write!(f, "    mov [rax], rdi\n")?;
                     // Is this code needed?
                     //write!(f, "    push rdi\n")?;

@@ -4,7 +4,7 @@ use std::rc::Rc;
 
 use super::token::Tokens;
 
-use NodeKind::*;
+use BinaryOpKind::*;
 use UnaryOpKind::*;
 use ParseErrorKind::*;
 
@@ -48,16 +48,16 @@ impl fmt::Display for ParseError {
 }
 
 #[derive(Debug, PartialEq)]
-pub enum NodeKind {
-    NodeAdd,
-    NodeSub,
-    NodeMul,
-    NodeDiv,
-    NodeEq,
-    NodeNe,
-    NodeGr,
-    NodeGe,
-    NodeAsn,
+pub enum BinaryOpKind {
+    BinaryOpAdd,
+    BinaryOpSub,
+    BinaryOpMul,
+    BinaryOpDiv,
+    BinaryOpEq,
+    BinaryOpNe,
+    BinaryOpGr,
+    BinaryOpGe,
+    BinaryOpAsn,
 }
 
 #[derive(Debug, PartialEq)]
@@ -68,8 +68,8 @@ pub enum UnaryOpKind {
 
 #[derive(Debug)]
 pub enum Node {
-    Operator {
-        kind: NodeKind,
+    BinaryOperator {
+        kind: BinaryOpKind,
         lhs: Box<Node>,
         rhs: Box<Node>,
     },
@@ -131,8 +131,8 @@ pub fn get_lvar_num() -> usize {
     num
 }
 
-fn new_node(kind: NodeKind, lhs: Box<Node>, rhs: Box<Node>) -> Box<Node> {
-    let node = Node::Operator {
+fn new_node_bop(kind: BinaryOpKind, lhs: Box<Node>, rhs: Box<Node>) -> Box<Node> {
+    let node = Node::BinaryOperator {
         kind: kind,
         lhs: lhs,
         rhs: rhs,
@@ -182,7 +182,7 @@ fn new_node_var(name: &str) -> Box<Node> {
     Box::new(node)
 }
 
-fn new_node_block(nodes: Vec<Box<Node>>) -> Box<Node> {
+fn new_node_blk(nodes: Vec<Box<Node>>) -> Box<Node> {
     let node = Node::Block {
         nodes: nodes,
     };
@@ -238,7 +238,7 @@ fn new_node_ret(rhs: Box<Node>) -> Box<Node> {
     Box::new(node)
 }
 
-fn block(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
+fn blk(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
     let mut nodes: Vec<Box<Node>> = Vec::new();
     while !tokens.expect_op("}") {
         match stmt(tokens) {
@@ -246,7 +246,7 @@ fn block(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
             Err(e) => return Err(e),
         }
     }
-    Ok(new_node_block(nodes))
+    Ok(new_node_blk(nodes))
 }
 
 fn primary(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
@@ -258,8 +258,8 @@ fn primary(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
             Err(ParseError::new(ParenExpected, tokens))
         }
     } else if let Some(name) = tokens.expect_idt() {
-        // It looks a little bad...
-        let name = &name.to_string().clone();
+        // Get ownership
+        let name = &name.to_string();
 
         if tokens.expect_op("(") {
             let mut args: Vec<Box<Node>> = Vec::new();
@@ -291,7 +291,7 @@ fn unary(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
             .map(|node| new_node_uop(UnaryOpDrf, node))
     } else if tokens.expect_op("-") {
         primary(tokens)
-            .map(|rhs| new_node(NodeSub, new_node_num(0), rhs))
+            .map(|rhs| new_node_bop(BinaryOpSub, new_node_num(0), rhs))
     } else {
         primary(tokens)
     }
@@ -302,10 +302,10 @@ fn mul(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
     while tokens.has_next() {
         if tokens.expect_op("*") {
             let rhs = unary(tokens)?;
-            node = new_node(NodeMul, node, rhs);
+            node = new_node_bop(BinaryOpMul, node, rhs);
         } else if tokens.expect_op("/") {
             let rhs = unary(tokens)?;
-            node = new_node(NodeDiv, node, rhs);
+            node = new_node_bop(BinaryOpDiv, node, rhs);
         } else {
             break;
         }
@@ -318,10 +318,10 @@ fn add(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
     while tokens.has_next() {
         if tokens.expect_op("+") {
             let rhs = mul(tokens)?;
-            node = new_node(NodeAdd, node, rhs);
+            node = new_node_bop(BinaryOpAdd, node, rhs);
         } else if tokens.expect_op("-") {
             let rhs = mul(tokens)?;
-            node = new_node(NodeSub, node, rhs);
+            node = new_node_bop(BinaryOpSub, node, rhs);
         } else {
             break;
         }
@@ -334,16 +334,16 @@ fn relational(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
     while tokens.has_next() {
         if tokens.expect_op("<") {
             let rhs = add(tokens)?;
-            node = new_node(NodeGr, node, rhs);
+            node = new_node_bop(BinaryOpGr, node, rhs);
         } else if tokens.expect_op("<=") {
             let rhs = add(tokens)?;
-            node = new_node(NodeGe, node, rhs);
+            node = new_node_bop(BinaryOpGe, node, rhs);
         } else if tokens.expect_op(">") {
             let lhs = add(tokens)?;
-            node = new_node(NodeGr, lhs, node);
+            node = new_node_bop(BinaryOpGr, lhs, node);
         } else if tokens.expect_op(">=") {
             let lhs = add(tokens)?;
-            node = new_node(NodeGe, lhs, node);
+            node = new_node_bop(BinaryOpGe, lhs, node);
         } else {
             break;
         }
@@ -356,10 +356,10 @@ fn equality(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
     while tokens.has_next() {
         if tokens.expect_op("==") {
             let rhs = relational(tokens)?;
-            node = new_node(NodeEq, node, rhs);
+            node = new_node_bop(BinaryOpEq, node, rhs);
         } else if tokens.expect_op("!=") {
             let rhs = relational(tokens)?;
-            node = new_node(NodeNe, node, rhs);
+            node = new_node_bop(BinaryOpNe, node, rhs);
         } else {
             break;
         }
@@ -372,7 +372,7 @@ fn assign(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
         .and_then(|node| {
             if tokens.expect_op("=") {
                 assign(tokens)
-                    .map(|rhs| new_node(NodeAsn, node, rhs))
+                    .map(|rhs| new_node_bop(BinaryOpAsn, node, rhs))
             } else {
                 Ok(node)
             }
@@ -385,8 +385,8 @@ fn expr(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
 
 fn func(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
     if let Some(name) = tokens.expect_idt() {
-        // It looks a little bad...
-        let name = &name.to_string().clone();
+        // Get ownership
+        let name = &name.to_string();
 
         if !tokens.expect_op("(") {
             return Err(ParseError::new(ArgExpected, tokens));
@@ -407,7 +407,7 @@ fn func(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
         if !tokens.expect_op("{") {
             return Err(ParseError::new(BlockExpected, tokens));
         }
-        let block = block(tokens)?;
+        let block = blk(tokens)?;
 
         Ok(new_node_func(name, args, block))
     } else {
@@ -422,7 +422,7 @@ fn ifel(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
 
     let ibody: Box<Node>;
     if tokens.expect_op("{") {
-        ibody = block(tokens)?;
+        ibody = blk(tokens)?;
     } else {
         ibody = stmt(tokens)?;
     }
@@ -430,7 +430,7 @@ fn ifel(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
     if tokens.expect_rsv("else") {
         let ebody: Box<Node>;
         if tokens.expect_op("{") {
-            ebody = block(tokens)?;
+            ebody = blk(tokens)?;
         } else {
             ebody = stmt(tokens)?;
         }
@@ -447,7 +447,7 @@ fn whl(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
 
     let body: Box<Node>;
     if tokens.expect_op("{") {
-        body = block(tokens)?;
+        body = blk(tokens)?;
     } else {
         body = stmt(tokens)?;
     }

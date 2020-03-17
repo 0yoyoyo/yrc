@@ -78,13 +78,9 @@ impl Tokens {
     pub fn expect_op(&mut self, expect: &str) -> bool {
         let cur_tok = &self.list[self.current];
         match &cur_tok.kind {
-            TokenOp(op) => {
-                if op == expect {
-                    self.current += 1;
-                    true
-                } else {
-                    false
-                }
+            TokenOp(op) if op == expect => {
+                self.current += 1;
+                true
             },
             _ => false
         }
@@ -104,13 +100,9 @@ impl Tokens {
     pub fn expect_rsv(&mut self, expect: &str) -> bool {
         let cur_tok = &self.list[self.current];
         match &cur_tok.kind {
-            TokenRsv(word) => {
-                if word == expect {
-                    self.current += 1;
-                    true
-                } else {
-                    false
-                }
+            TokenRsv(word) if word == expect => {
+                self.current += 1;
+                true
             },
             _ => false
         }
