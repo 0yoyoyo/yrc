@@ -319,6 +319,15 @@ mod tests {
     }
 
     #[test]
+    fn calc_reference() {
+        check_return_num("fn main() {\
+                              a = 2;\
+                              b = &a;
+                              return *b;\
+                          }", 2);
+    }
+
+    #[test]
     fn check_format() {
         check_return_num("fn main() { return 1+2+3; }", 6);
         check_return_num("fn main() { return  1 + 2 + 3 ; }", 6);
