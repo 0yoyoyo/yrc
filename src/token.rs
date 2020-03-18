@@ -187,6 +187,7 @@ pub fn tokenize(formula: &str) -> Result<Vec<Token>, TokenError> {
                         .unwrap()
                         .to_string();
                     if name == "fn"      .to_string() ||
+                       name == "let"     .to_string() ||
                        name == "if"      .to_string() ||
                        name == "else"    .to_string() ||
                        name == "for"     .to_string() ||

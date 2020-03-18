@@ -120,6 +120,7 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use super::parse::clear_lvar_list;
     use std::process::Command;
     use rand::prelude::*;
 
@@ -139,6 +140,7 @@ mod tests {
     fn check_return_num(formula: &str, expect: u32) {
         let fname = format!("tmp{}", random_string(8));
         compile_to_fname(formula, &fname).unwrap();
+        clear_lvar_list();
 
         let output = Command::new("bash")
             .arg("-c")
@@ -200,23 +202,30 @@ mod tests {
     #[test]
     fn calc_local_variable() {
         check_return_num("fn main() {\
+                              let a;\
                               a = 1;\
                               return a;\
                           }", 1);
         check_return_num("fn main() {\
+                              let z;\
                               z = 1;\
                               return z;\
                           }", 1);
         check_return_num("fn main() {\
+                              let n;\
                               n = 10 + 2;\
                               return n * 2;\
                           }", 24);
         check_return_num("fn main() {\
+                              let abc;\
+                              let def;\
                               abc = 2;\
                               def = 3;\
                               return abc + def;\
                           }", 5);
         check_return_num("fn main() {\
+                              let abc;\
+                              let def;\
                               abc = 2;\
                               def = abc + 3;\
                               return def;\
@@ -226,6 +235,7 @@ mod tests {
     #[test]
     fn calc_control() {
         check_return_num("fn main() {\
+                              let a;\
                               a = 1;\
                               if 1 == 1 {\
                                   a = 2;\
@@ -235,6 +245,7 @@ mod tests {
                               return a;\
                           }", 2);
         check_return_num("fn main() {\
+                              let a;\
                               a = 1;\
                               if 1 == 2 {\
                                   a = 2;\
@@ -244,6 +255,8 @@ mod tests {
                               return a;\
                           }", 3);
         check_return_num("fn main() {\
+                              let a;\
+                              let b;\
                               a = 1;\
                               if 1 == 1 {\
                                   b = 1;\
@@ -252,6 +265,7 @@ mod tests {
                               return a;\
                           }", 2);
         check_return_num("fn main() {\
+                              let a;\
                               a = 1;\
                               if 1 == 1 {\
                                   a = a + 1;\
@@ -268,6 +282,7 @@ mod tests {
                               return a;\
                           }", 4);
         check_return_num("fn main() {\
+                              let a;\
                               a = 1;\
                               while a != 10 {\
                                   a = a + 1;\
@@ -285,21 +300,29 @@ mod tests {
                               return foo();\
                           }", 3);
         check_return_num("fn foo() {\
+                              let c;\
+                              let d;\
                               c = 3;\
                               d = 4;\
                               return c + d;\
                           }\
                           fn main() {\
+                              let a;\
+                              let b;\
                               a = 1;\
                               b = 2;\
                               return a + b + foo();\
                           }", 10);
         check_return_num("fn foo() {\
+                              let a;\
+                              let b;\
                               a = 3;\
                               b = 4;\
                               return a + b;\
                           }\
                           fn main() {\
+                              let a;\
+                              let b;\
                               a = 1;\
                               b = 2;\
                               return a + b + foo();\
@@ -321,6 +344,8 @@ mod tests {
     #[test]
     fn calc_reference() {
         check_return_num("fn main() {\
+                              let a;\
+                              let b;\
                               a = 2;\
                               b = &a;
                               return *b;\

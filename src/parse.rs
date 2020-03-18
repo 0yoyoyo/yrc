@@ -12,10 +12,12 @@ use ParseErrorKind::*;
 pub enum ParseErrorKind {
     NumberExpected,
     FuncExpected,
+    VariableExpected,
     ArgExpected,
     ParenExpected,
     ScolonExpected,
     BlockExpected,
+    UnknownVariable,
 }
 
 #[derive(Debug)]
@@ -39,10 +41,12 @@ impl fmt::Display for ParseError {
         match &self.error {
             NumberExpected => write!(f, "Number is expected here!"),
             FuncExpected => write!(f, "Function is expected here!"),
+            VariableExpected => write!(f, "Variable is expected here!"),
             ArgExpected => write!(f, "Arguments are needed!"),
             ParenExpected => write!(f, "Parentheses are not closed!"),
             ScolonExpected => write!(f, "Semicolon is needed!"),
             BlockExpected => write!(f, "Block is expected here!"),
+            UnknownVariable => write!(f, "Unknown variable!"),
         }
     }
 }
@@ -125,6 +129,12 @@ thread_local!(
     }
 );
 
+#[cfg(test)]
+pub fn clear_lvar_list() {
+    let list = LVAR_LIST.with(|v| v.clone());
+    list.borrow_mut().clear();
+}
+
 pub fn get_lvar_num() -> usize {
     let list = LVAR_LIST.with(|v| v.clone());
     let num = list.borrow().len();
@@ -155,31 +165,24 @@ fn new_node_num(val: u32) -> Box<Node> {
     Box::new(node)
 }
 
-fn new_node_var(name: &str) -> Box<Node> {
-    let list = LVAR_LIST.with(|v| v.clone());
-    // Set default offset as inputting new variable.
-    let mut offset = 8 * (list.borrow().len() + 1);
-    let mut i = 0;
-
-    while let Some(lv) = list.borrow().get(i) {
-        if lv.name == name.to_string() {
-            offset = lv.offset;
-            break;
-        }
-        i += 1;
-    }
-    if i == list.borrow().len(){
-        let new = Lvar {
-            name: name.to_string(),
-            offset: 8 * (list.borrow().len() + 1),
-        };
-        list.borrow_mut().push(new);
-    }
-
+fn new_node_var(offset: usize) -> Box<Node> {
     let node = Node::LocalVariable {
         offset: offset,
     };
     Box::new(node)
+}
+
+fn new_node_bind(name: &str) -> Box<Node> {
+    let list = LVAR_LIST.with(|v| v.clone());
+
+    let offset = 8 * (list.borrow().len() + 1);
+    let new = Lvar {
+        name: name.to_string(),
+        offset: offset,
+    };
+    list.borrow_mut().push(new);
+
+    new_node_var(offset)
 }
 
 fn new_node_blk(nodes: Vec<Box<Node>>) -> Box<Node> {
@@ -238,6 +241,29 @@ fn new_node_ret(rhs: Box<Node>) -> Box<Node> {
     Box::new(node)
 }
 
+fn try_new_node_var(name: &str, tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
+    let list = LVAR_LIST.with(|v| v.clone());
+
+    let mut i = 0;
+    while let Some(lv) = list.borrow().get(i) {
+        if lv.name == name.to_string() {
+            let offset = lv.offset;
+            return Ok(new_node_var(offset));
+        }
+        i += 1;
+    }
+
+    Err(ParseError::new(UnknownVariable, tokens))
+}
+
+fn bind(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
+    if let Some(name) = tokens.expect_idt() {
+        Ok(new_node_bind(name))
+    } else {
+        Err(ParseError::new(VariableExpected, tokens))
+    }
+}
+
 fn blk(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
     let mut nodes: Vec<Box<Node>> = Vec::new();
     while !tokens.expect_op("}") {
@@ -273,7 +299,7 @@ fn primary(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
 
             Ok(new_node_call(name, args))
         } else {
-            Ok(new_node_var(name))
+            try_new_node_var(name, tokens)
         }
     } else {
         let num = tokens.expect_num()
@@ -395,7 +421,7 @@ fn func(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
         let mut args: Vec<Box<Node>> = Vec::new();
         while !tokens.expect_op(")") {
             if let Some(name) = tokens.expect_idt() {
-                args.push(new_node_var(name));
+                args.push(new_node_bind(name));
             } else {
                 return Err(ParseError::new(ParenExpected, tokens));
             }
@@ -466,6 +492,8 @@ fn stmt(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
     } else if tokens.expect_rsv("while") {
         node = whl(tokens)?;
         return Ok(node);
+    } else if tokens.expect_rsv("let") {
+        node = bind(tokens)?;
     } else if tokens.expect_rsv("return") {
         let rhs = expr(tokens)?;
         node = new_node_ret(rhs);
