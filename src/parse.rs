@@ -93,6 +93,7 @@ pub enum Node {
     Function {
         name: String,
         args: Vec<Box<Node>>,
+        stack: usize,
         block: Box<Node>,
     },
     Call {
@@ -129,7 +130,12 @@ thread_local!(
     }
 );
 
-#[cfg(test)]
+thread_local!(
+    static BLOCK_LEVEL: Rc<RefCell<usize>> = {
+        Rc::new(RefCell::new(0))
+    }
+);
+
 pub fn clear_lvar_list() {
     let list = LVAR_LIST.with(|v| v.clone());
     list.borrow_mut().clear();
@@ -139,6 +145,20 @@ pub fn get_lvar_num() -> usize {
     let list = LVAR_LIST.with(|v| v.clone());
     let num = list.borrow().len();
     num
+}
+
+pub fn get_stack_size() -> usize {
+    8 * get_lvar_num()
+}
+
+fn add_block_level() {
+    let level = BLOCK_LEVEL.with(|n| n.clone());
+    *level.borrow_mut() += 1;
+}
+
+fn sub_block_level() {
+    let level = BLOCK_LEVEL.with(|n| n.clone());
+    *level.borrow_mut() -= 1;
 }
 
 fn new_node_bop(kind: BinaryOpKind, lhs: Box<Node>, rhs: Box<Node>) -> Box<Node> {
@@ -192,10 +212,11 @@ fn new_node_blk(nodes: Vec<Box<Node>>) -> Box<Node> {
     Box::new(node)
 }
 
-fn new_node_func(name: &str, args: Vec<Box<Node>>, block: Box<Node>) -> Box<Node> {
+fn new_node_func(name: &str, args: Vec<Box<Node>>, stack: usize, block: Box<Node>) -> Box<Node> {
     let node = Node::Function {
         name: name.to_string(),
         args: args,
+        stack: stack,
         block: block,
     };
     Box::new(node)
@@ -265,6 +286,7 @@ fn bind(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
 }
 
 fn blk(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
+    add_block_level();
     let mut nodes: Vec<Box<Node>> = Vec::new();
     while !tokens.expect_op("}") {
         match stmt(tokens) {
@@ -272,6 +294,7 @@ fn blk(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
             Err(e) => return Err(e),
         }
     }
+    sub_block_level();
     Ok(new_node_blk(nodes))
 }
 
@@ -435,7 +458,10 @@ fn func(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
         }
         let block = blk(tokens)?;
 
-        Ok(new_node_func(name, args, block))
+        let stack = get_stack_size();
+        clear_lvar_list();
+
+        Ok(new_node_func(name, args, stack, block))
     } else {
         Err(ParseError::new(FuncExpected, tokens))
     }

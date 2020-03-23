@@ -8,7 +8,6 @@ use std::io::prelude::*;
 use super::parse::Node;
 use super::parse::BinaryOpKind::*;
 use super::parse::UnaryOpKind::*;
-use super::parse::get_lvar_num;
 
 use AsmError::*;
 
@@ -144,13 +143,13 @@ fn gen_asm_node(f: &mut File, node: Box<Node>) -> Result<(), AsmError> {
         Node::Block { nodes } => {
             gen_asm_block(f, nodes)?;
         },
-        Node::Function { name, args, block } => {
+        Node::Function { name, args, stack, block } => {
             write!(f, ".global {}\n", name)?;
             write!(f, "{}:\n", name)?;
 
             write!(f, "    push rbp\n")?;
             write!(f, "    mov rbp, rsp\n")?;
-            write!(f, "    sub rsp, {}\n", 8 * get_lvar_num())?;
+            write!(f, "    sub rsp, {}\n", stack)?;
 
             let mut iter = args.into_iter().enumerate();
             let arg_regs = ["rdi", "rsi", "rdx", "rcx", "r8", "r9"];

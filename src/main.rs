@@ -120,7 +120,6 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use super::parse::clear_lvar_list;
     use std::process::Command;
     use rand::prelude::*;
 
@@ -140,7 +139,6 @@ mod tests {
     fn check_return_num(formula: &str, expect: u32) {
         let fname = format!("tmp{}", random_string(8));
         compile_to_fname(formula, &fname).unwrap();
-        clear_lvar_list();
 
         let output = Command::new("bash")
             .arg("-c")
