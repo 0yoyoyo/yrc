@@ -33,6 +33,13 @@ impl ParseError {
             pos: toks.head(),
         }
     }
+
+    fn new_with_offset(e: ParseErrorKind, toks: &Tokens, offset: usize) -> Self {
+        ParseError {
+            error: e,
+            pos: toks.head_before(offset).unwrap_or(0),
+        }
+    }
 }
 
 impl fmt::Display for ParseError {
@@ -274,7 +281,7 @@ fn try_new_node_var(name: &str, tokens: &mut Tokens) -> Result<Box<Node>, ParseE
         i += 1;
     }
 
-    Err(ParseError::new(UnknownVariable, tokens))
+    Err(ParseError::new_with_offset(UnknownVariable, tokens, 1))
 }
 
 fn bind(tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {

@@ -121,6 +121,10 @@ impl Tokens {
         cur_tok.pos
     }
 
+    pub fn head_before(&self, offset: usize) -> Option<usize> {
+        self.list.get(self.current - offset).and_then(|tok| Some(tok.pos))
+    }
+
     pub fn new(v: Vec<Token>) -> Self {
         Self {
             list: v,
