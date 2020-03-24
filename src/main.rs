@@ -12,9 +12,9 @@ use std::fs::File;
 use token::tokenize;
 use token::Tokens;
 use token::TokenError;
-use parse::program;
+use parse::Parser;
 use parse::ParseError;
-use assembly::gen_asm;
+use assembly::AsmGenerator;
 use assembly::AsmError;
 
 use CompileError::*;
@@ -81,12 +81,14 @@ fn compile_to_fname(formula: &str, fname: &str) -> Result<(), CompileError> {
     let token_list = tokenize(formula)?;
     let mut tokens = Tokens::new(token_list);
 
-    let nodes = program(&mut tokens)?;
+    let mut parser = Parser::new();
+    let nodes = parser.program(&mut tokens)?;
 
     make_output_dir()?;
     let mut f = File::create(format!("{}/{}.s", OUTPUT_DIR, fname))?;
 
-    gen_asm(&mut f, nodes)?;
+    let mut generator = AsmGenerator::new();
+    generator.gen_asm(&mut f, nodes)?;
 
     Ok(())
 }
