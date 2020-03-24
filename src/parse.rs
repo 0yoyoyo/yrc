@@ -226,18 +226,7 @@ impl Parser {
         8 * self.lvar_list.len()
     }
 
-    fn new_node_bind(&mut self, name: &str) -> Box<Node> {
-        let offset = 8 * (self.lvar_list.len() + 1);
-        let new = Lvar {
-            name: name.to_string(),
-            offset: offset,
-        };
-        self.lvar_list.push(new);
-
-        new_node_var(offset)
-    }
-
-    fn try_new_node_var(&mut self, name: &str, tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
+    fn lvar(&mut self, name: &str, tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
         let mut i = 0;
         while let Some(lv) = self.lvar_list.get(i) {
             if lv.name == name.to_string() {
@@ -252,7 +241,14 @@ impl Parser {
 
     fn bind(&mut self, tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
         if let Some(name) = tokens.expect_idt() {
-            Ok(self.new_node_bind(name))
+            let offset = 8 * (self.lvar_list.len() + 1);
+            let new = Lvar {
+                name: name.to_string(),
+                offset: offset,
+            };
+            self.lvar_list.push(new);
+
+            Ok(new_node_var(offset))
         } else {
             Err(ParseError::new(VariableExpected, tokens))
         }
@@ -295,7 +291,7 @@ impl Parser {
 
                 Ok(new_node_call(name, args))
             } else {
-                self.try_new_node_var(name, tokens)
+                self.lvar(name, tokens)
             }
         } else {
             let num = tokens.expect_num()
@@ -417,7 +413,14 @@ impl Parser {
             let mut args: Vec<Box<Node>> = Vec::new();
             while !tokens.expect_op(")") {
                 if let Some(name) = tokens.expect_idt() {
-                    args.push(self.new_node_bind(name));
+                    let offset = 8 * (self.lvar_list.len() + 1);
+                    let new = Lvar {
+                        name: name.to_string(),
+                        offset: offset,
+                    };
+                    self.lvar_list.push(new);
+
+                    args.push(new_node_var(offset));
                 } else {
                     return Err(ParseError::new(ParenExpected, tokens));
                 }
