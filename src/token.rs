@@ -160,7 +160,7 @@ pub fn tokenize(formula: &str) -> Result<Vec<Token>, TokenError> {
             b'(' | b')' |
             b'{' | b'}' |
             b'&' | b',' |
-            b';' => {
+            b':' | b';' => {
                 let op = str::from_utf8(&bytes[cur].to_ne_bytes())
                     .unwrap()
                     .to_string();
@@ -202,6 +202,8 @@ pub fn tokenize(formula: &str) -> Result<Vec<Token>, TokenError> {
                        name == "break"   .to_string() ||
                        name == "continue".to_string() ||
                        name == "return"  .to_string() {
+                        tokens.push(Token::new(TokenRsv(name), pos));
+                    } else if name == "i32".to_string() {
                         tokens.push(Token::new(TokenRsv(name), pos));
                     } else {
                         tokens.push(Token::new(TokenIdt(name), pos));

@@ -11,6 +11,7 @@ pub enum ParseErrorKind {
     NumberExpected,
     FuncExpected,
     VariableExpected,
+    TypeExpected,
     ArgExpected,
     ParenExpected,
     ScolonExpected,
@@ -47,6 +48,7 @@ impl fmt::Display for ParseError {
             NumberExpected => write!(f, "Number is expected here!"),
             FuncExpected => write!(f, "Function is expected here!"),
             VariableExpected => write!(f, "Variable is expected here!"),
+            TypeExpected => write!(f, "Type is expected here!"),
             ArgExpected => write!(f, "Arguments are needed!"),
             ParenExpected => write!(f, "Parentheses are not closed!"),
             ScolonExpected => write!(f, "Semicolon is needed!"),
@@ -211,8 +213,14 @@ fn new_node_ret(rhs: Box<Node>) -> Box<Node> {
     Box::new(node)
 }
 
+enum Type {
+    Int,
+    Ptr(Box<Type>),
+}
+
 struct Lvar {
     name: String,
+    ty: Type,
     offset: usize,
 }
 
@@ -241,14 +249,30 @@ impl Parser {
 
     fn bind(&mut self, tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
         if let Some(name) = tokens.expect_idt() {
-            let offset = 8 * (self.lvar_list.len() + 1);
-            let new = Lvar {
-                name: name.to_string(),
-                offset: offset,
-            };
-            self.lvar_list.push(new);
+            // Get ownership
+            let name = &name.to_string();
 
-            Ok(new_node_var(offset))
+            if tokens.expect_op(":") {
+                if tokens.expect_op("*") {
+                    unimplemented!();
+                } else {
+                    if tokens.expect_rsv("i32") {
+                        let offset = 8 * (self.lvar_list.len() + 1);
+                        let new = Lvar {
+                            name: name.to_string(),
+                            ty: Type::Int,
+                            offset: offset,
+                        };
+                        self.lvar_list.push(new);
+
+                        Ok(new_node_var(offset))
+                    } else {
+                        Err(ParseError::new(TypeExpected, tokens))
+                    }
+                }
+            } else {
+                Err(ParseError::new(TypeExpected, tokens))
+            }
         } else {
             Err(ParseError::new(VariableExpected, tokens))
         }
@@ -416,6 +440,7 @@ impl Parser {
                     let offset = 8 * (self.lvar_list.len() + 1);
                     let new = Lvar {
                         name: name.to_string(),
+                        ty: Type::Int,
                         offset: offset,
                     };
                     self.lvar_list.push(new);
