@@ -137,11 +137,12 @@ pub fn tokenize(formula: &str) -> Result<Vec<Token>, TokenError> {
     let mut tokens: Vec<Token> = Vec::new();
     let mut tmp: Vec<u8> = Vec::new();
     let mut cur = 0;
+    let mut is_str = false;
     let bytes = formula.as_bytes();
 
     while cur < bytes.len() {
         match bytes[cur] {
-            b'0'..=b'9' => {
+            b'0'..=b'9' if !is_str => {
                 tmp.push(bytes[cur]);
                 if (cur + 1 >= bytes.len()) ||
                    (!b"0123456789".contains(&bytes[cur + 1])) {
@@ -179,7 +180,9 @@ pub fn tokenize(formula: &str) -> Result<Vec<Token>, TokenError> {
                 }
             },
             b'A'..=b'Z' |
-            b'a'..=b'z' => {
+            b'a'..=b'z' |
+            b'0'..=b'9' => {
+                is_str = true;
                 tmp.push(bytes[cur]);
                 if (cur + 1 >= bytes.len()) ||
                    (!b"ABCDEFGHIJKLMNOPQRSTUVWXYZ\
@@ -204,6 +207,7 @@ pub fn tokenize(formula: &str) -> Result<Vec<Token>, TokenError> {
                         tokens.push(Token::new(TokenIdt(name), pos));
                     }
                     tmp.clear();
+                    is_str = false;
                 }
             },
             b' ' | b'\t'| b'\n' => (),
