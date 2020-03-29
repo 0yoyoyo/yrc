@@ -202,30 +202,30 @@ mod tests {
     #[test]
     fn calc_local_variable() {
         check_return_num("fn main() {\
-                              let a;\
+                              let a: i32;\
                               a = 1;\
                               return a;\
                           }", 1);
         check_return_num("fn main() {\
-                              let z;\
+                              let z: i32;\
                               z = 1;\
                               return z;\
                           }", 1);
         check_return_num("fn main() {\
-                              let n;\
+                              let n: i32;\
                               n = 10 + 2;\
                               return n * 2;\
                           }", 24);
         check_return_num("fn main() {\
-                              let abc;\
-                              let def;\
+                              let abc: i32;\
+                              let def: i32;\
                               abc = 2;\
                               def = 3;\
                               return abc + def;\
                           }", 5);
         check_return_num("fn main() {\
-                              let abc;\
-                              let def;\
+                              let abc: i32;\
+                              let def: i32;\
                               abc = 2;\
                               def = abc + 3;\
                               return def;\
@@ -235,7 +235,7 @@ mod tests {
     #[test]
     fn calc_control() {
         check_return_num("fn main() {\
-                              let a;\
+                              let a: i32;\
                               a = 1;\
                               if 1 == 1 {\
                                   a = 2;\
@@ -245,7 +245,7 @@ mod tests {
                               return a;\
                           }", 2);
         check_return_num("fn main() {\
-                              let a;\
+                              let a: i32;\
                               a = 1;\
                               if 1 == 2 {\
                                   a = 2;\
@@ -255,8 +255,8 @@ mod tests {
                               return a;\
                           }", 3);
         check_return_num("fn main() {\
-                              let a;\
-                              let b;\
+                              let a: i32;\
+                              let b: i32;\
                               a = 1;\
                               if 1 == 1 {\
                                   b = 1;\
@@ -265,7 +265,7 @@ mod tests {
                               return a;\
                           }", 2);
         check_return_num("fn main() {\
-                              let a;\
+                              let a: i32;\
                               a = 1;\
                               if 1 == 1 {\
                                   a = a + 1;\
@@ -282,7 +282,7 @@ mod tests {
                               return a;\
                           }", 4);
         check_return_num("fn main() {\
-                              let a;\
+                              let a: i32;\
                               a = 1;\
                               while a != 10 {\
                                   a = a + 1;\
@@ -300,40 +300,40 @@ mod tests {
                               return foo();\
                           }", 3);
         check_return_num("fn foo() {\
-                              let c;\
-                              let d;\
+                              let c: i32;\
+                              let d: i32;\
                               c = 3;\
                               d = 4;\
                               return c + d;\
                           }\
                           fn main() {\
-                              let a;\
-                              let b;\
+                              let a: i32;\
+                              let b: i32;\
                               a = 1;\
                               b = 2;\
                               return a + b + foo();\
                           }", 10);
         check_return_num("fn foo() {\
-                              let a;\
-                              let b;\
+                              let a: i32;\
+                              let b: i32;\
                               a = 3;\
                               b = 4;\
                               return a + b;\
                           }\
                           fn main() {\
-                              let a;\
-                              let b;\
+                              let a: i32;\
+                              let b: i32;\
                               a = 1;\
                               b = 2;\
                               return a + b + foo();\
                           }", 10);
-        check_return_num("fn foo(a) {\
+        check_return_num("fn foo(a: i32) {\
                               return a * 2;\
                           }\
                           fn main() {\
                               return foo(2);\
                           }", 4);
-        check_return_num("fn foo(a, b, c, d, e, f) {\
+        check_return_num("fn foo(a: i32, b: i32, c: i32, d: i32, e: i32, f: i32) {\
                               return (a + b + c + d + e + f) * 2;\
                           }\
                           fn main() {\
@@ -344,8 +344,8 @@ mod tests {
     #[test]
     fn calc_reference() {
         check_return_num("fn main() {\
-                              let a;\
-                              let b;\
+                              let a: i32;\
+                              let b: i32;\
                               a = 2;\
                               b = &a;
                               return *b;\
