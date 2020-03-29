@@ -234,6 +234,26 @@ impl Parser {
         8 * self.lvar_list.len()
     }
 
+    fn typ(&mut self, name: &str, tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
+        if tokens.expect_op("*") {
+            unimplemented!();
+        } else {
+            if tokens.expect_rsv("i32") {
+                let offset = 8 * (self.lvar_list.len() + 1);
+                let new = Lvar {
+                    name: name.to_string(),
+                    ty: Type::Int,
+                    offset: offset,
+                };
+                self.lvar_list.push(new);
+
+                Ok(new_node_var(offset))
+            } else {
+                Err(ParseError::new(TypeExpected, tokens))
+            }
+        }
+    }
+
     fn lvar(&mut self, name: &str, tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
         let mut i = 0;
         while let Some(lv) = self.lvar_list.get(i) {
@@ -253,23 +273,7 @@ impl Parser {
             let name = &name.to_string();
 
             if tokens.expect_op(":") {
-                if tokens.expect_op("*") {
-                    unimplemented!();
-                } else {
-                    if tokens.expect_rsv("i32") {
-                        let offset = 8 * (self.lvar_list.len() + 1);
-                        let new = Lvar {
-                            name: name.to_string(),
-                            ty: Type::Int,
-                            offset: offset,
-                        };
-                        self.lvar_list.push(new);
-
-                        Ok(new_node_var(offset))
-                    } else {
-                        Err(ParseError::new(TypeExpected, tokens))
-                    }
-                }
+                self.typ(name, tokens)
             } else {
                 Err(ParseError::new(TypeExpected, tokens))
             }
@@ -437,15 +441,15 @@ impl Parser {
             let mut args: Vec<Box<Node>> = Vec::new();
             while !tokens.expect_op(")") {
                 if let Some(name) = tokens.expect_idt() {
-                    let offset = 8 * (self.lvar_list.len() + 1);
-                    let new = Lvar {
-                        name: name.to_string(),
-                        ty: Type::Int,
-                        offset: offset,
-                    };
-                    self.lvar_list.push(new);
+                    // Get ownership
+                    let name = &name.to_string();
 
-                    args.push(new_node_var(offset));
+                    if tokens.expect_op(":") {
+                        let node = self.typ(name, tokens)?;
+                        args.push(node);
+                    } else {
+                        return Err(ParseError::new(TypeExpected, tokens));
+                    }
                 } else {
                     return Err(ParseError::new(ParenExpected, tokens));
                 }
