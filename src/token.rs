@@ -133,27 +133,82 @@ impl Tokens {
     }
 }
 
+fn lex_num(bytes: &[u8], cur: &mut usize) -> Token {
+    let mut tmp: Vec<u8> = Vec::new();
+    let pos = *cur;
+    loop {
+        tmp.push(bytes[*cur]);
+        *cur += 1;
+        if (*cur >= bytes.len()) ||
+           (!b"0123456789".contains(&bytes[*cur])) {
+            let num = str::from_utf8(&tmp)
+                .unwrap()
+                .parse()
+                .unwrap();
+            return Token::new(TokenNum(num), pos);
+        }
+    }
+}
+
+fn lex_op(bytes: &[u8], cur: &mut usize) -> Token {
+    let mut tmp: Vec<u8> = Vec::new();
+    let pos = *cur;
+    loop {
+        tmp.push(bytes[*cur]);
+        *cur += 1;
+        if (*cur >= bytes.len()) ||
+           (!b"<>=!".contains(&bytes[*cur])) {
+            let op = str::from_utf8(&tmp)
+                .unwrap()
+                .to_string();
+            return Token::new(TokenOp(op), pos);
+        }
+    }
+}
+
+fn lex_word(bytes: &[u8], cur: &mut usize) -> Token {
+    let mut tmp: Vec<u8> = Vec::new();
+    let pos = *cur;
+    loop {
+        tmp.push(bytes[*cur]);
+        *cur += 1;
+        if (*cur >= bytes.len()) ||
+           (!b"ABCDEFGHIJKLMNOPQRSTUVWXYZ\
+               abcdefghijklmnopqrstuvwxyz\
+               0123456789"
+            .contains(&bytes[*cur])) {
+            let name = str::from_utf8(&tmp)
+                .unwrap()
+                .to_string();
+            if name == "fn"      .to_string() ||
+               name == "let"     .to_string() ||
+               name == "if"      .to_string() ||
+               name == "else"    .to_string() ||
+               name == "for"     .to_string() ||
+               name == "while"   .to_string() ||
+               name == "break"   .to_string() ||
+               name == "continue".to_string() ||
+               name == "return"  .to_string() {
+                return Token::new(TokenRsv(name), pos);
+            } else if name == "i32".to_string() {
+                return Token::new(TokenRsv(name), pos);
+            } else {
+                return Token::new(TokenIdt(name), pos);
+            }
+        }
+    }
+}
+
 pub fn tokenize(formula: &str) -> Result<Vec<Token>, TokenError> {
     let mut tokens: Vec<Token> = Vec::new();
-    let mut tmp: Vec<u8> = Vec::new();
     let mut cur = 0;
-    let mut is_str = false;
     let bytes = formula.as_bytes();
 
     while cur < bytes.len() {
         match bytes[cur] {
-            b'0'..=b'9' if !is_str => {
-                tmp.push(bytes[cur]);
-                if (cur + 1 >= bytes.len()) ||
-                   (!b"0123456789".contains(&bytes[cur + 1])) {
-                    let pos = cur - (tmp.len() - 1);
-                    let num = str::from_utf8(&tmp)
-                        .unwrap()
-                        .parse()
-                        .unwrap();
-                    tokens.push(Token::new(TokenNum(num), pos));
-                    tmp.clear();
-                }
+            b'0'..=b'9' => {
+                let token = lex_num(bytes, &mut cur);
+                tokens.push(token);
             },
             b'+' | b'-' |
             b'*' | b'/' |
@@ -165,57 +220,21 @@ pub fn tokenize(formula: &str) -> Result<Vec<Token>, TokenError> {
                     .unwrap()
                     .to_string();
                 tokens.push(Token::new(TokenOp(op), cur));
+                cur += 1;
             },
             b'<' | b'>' |
             b'=' | b'!' => {
-                tmp.push(bytes[cur]);
-                if (cur + 1 >= bytes.len()) ||
-                   (!b"<>=!".contains(&bytes[cur + 1])) {
-                    let pos = cur - (tmp.len() - 1);
-                    let op = str::from_utf8(&tmp)
-                        .unwrap()
-                        .to_string();
-                    tokens.push(Token::new(TokenOp(op), pos));
-                    tmp.clear();
-                }
+                let token = lex_op(bytes, &mut cur);
+                tokens.push(token);
             },
             b'A'..=b'Z' |
-            b'a'..=b'z' |
-            b'0'..=b'9' => {
-                is_str = true;
-                tmp.push(bytes[cur]);
-                if (cur + 1 >= bytes.len()) ||
-                   (!b"ABCDEFGHIJKLMNOPQRSTUVWXYZ\
-                       abcdefghijklmnopqrstuvwxyz\
-                       0123456789"
-                    .contains(&bytes[cur + 1])) {
-                    let pos = cur - (tmp.len() - 1);
-                    let name = str::from_utf8(&tmp)
-                        .unwrap()
-                        .to_string();
-                    if name == "fn"      .to_string() ||
-                       name == "let"     .to_string() ||
-                       name == "if"      .to_string() ||
-                       name == "else"    .to_string() ||
-                       name == "for"     .to_string() ||
-                       name == "while"   .to_string() ||
-                       name == "break"   .to_string() ||
-                       name == "continue".to_string() ||
-                       name == "return"  .to_string() {
-                        tokens.push(Token::new(TokenRsv(name), pos));
-                    } else if name == "i32".to_string() {
-                        tokens.push(Token::new(TokenRsv(name), pos));
-                    } else {
-                        tokens.push(Token::new(TokenIdt(name), pos));
-                    }
-                    tmp.clear();
-                    is_str = false;
-                }
+            b'a'..=b'z' => {
+                let token = lex_word(bytes, &mut cur);
+                tokens.push(token);
             },
-            b' ' | b'\t'| b'\n' => (),
+            b' ' | b'\t'| b'\n' => cur += 1,
             _ => return Err(TokenError::new(CannotTokenize, cur)),
         }
-        cur += 1;
     }
 
     tokens.push(Token::new(TokenEnd, cur));
