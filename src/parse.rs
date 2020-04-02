@@ -93,6 +93,7 @@ pub enum Node {
     },
     LocalVariable {
         offset: usize,
+        ty: Type,
     },
     Block {
         nodes: Vec<Box<Node>>,
@@ -149,9 +150,10 @@ fn new_node_num(val: u32) -> Box<Node> {
     Box::new(node)
 }
 
-fn new_node_var(offset: usize) -> Box<Node> {
+fn new_node_var(offset: usize, ty: Type) -> Box<Node> {
     let node = Node::LocalVariable {
         offset: offset,
+        ty: ty,
     };
     Box::new(node)
 }
@@ -213,7 +215,8 @@ fn new_node_ret(rhs: Box<Node>) -> Box<Node> {
     Box::new(node)
 }
 
-enum Type {
+#[derive(Debug, Clone)]
+pub enum Type {
     Int,
     Ptr(Box<Type>),
 }
@@ -234,23 +237,35 @@ impl Parser {
         8 * self.lvar_list.len()
     }
 
-    fn typ(&mut self, name: &str, tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
+    fn get_type(&mut self, tokens: &mut Tokens) -> Result<Type, ()> {
         if tokens.expect_op("*") {
-            unimplemented!();
+            if let Ok(ty) = self.get_type(tokens) {
+                Ok(Type::Ptr(Box::new(ty)))
+            } else {
+                Err(())
+            }
         } else {
             if tokens.expect_rsv("i32") {
-                let offset = 8 * (self.lvar_list.len() + 1);
-                let new = Lvar {
-                    name: name.to_string(),
-                    ty: Type::Int,
-                    offset: offset,
-                };
-                self.lvar_list.push(new);
-
-                Ok(new_node_var(offset))
+                Ok(Type::Int)
             } else {
-                Err(ParseError::new(TypeExpected, tokens))
+                Err(())
             }
+        }
+    }
+
+    fn typ(&mut self, name: &str, tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
+        if let Ok(ty) = self.get_type(tokens) {
+            let offset = 8 * (self.lvar_list.len() + 1);
+            let new = Lvar {
+                name: name.to_string(),
+                ty: ty.clone(),
+                offset: offset,
+            };
+            self.lvar_list.push(new);
+
+            Ok(new_node_var(offset, ty))
+        } else {
+            Err(ParseError::new(TypeExpected, tokens))
         }
     }
 
@@ -258,8 +273,7 @@ impl Parser {
         let mut i = 0;
         while let Some(lv) = self.lvar_list.get(i) {
             if lv.name == name.to_string() {
-                let offset = lv.offset;
-                return Ok(new_node_var(offset));
+                return Ok(new_node_var(lv.offset, lv.ty.clone()));
             }
             i += 1;
         }

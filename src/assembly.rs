@@ -45,7 +45,7 @@ impl AsmGenerator {
 
     fn gen_asm_lval(&mut self, f: &mut File, node: Box<Node>) -> Result<(), AsmError> {
         match *node {
-            Node::LocalVariable { offset } => {
+            Node::LocalVariable { offset, ty: _ } => {
                 write!(f, "    mov rax, rbp\n")?;
                 write!(f, "    sub rax, {}\n", offset)?;
                 write!(f, "    push rax\n")?;
@@ -133,7 +133,7 @@ impl AsmGenerator {
                     }
                 }
             },
-            Node::LocalVariable { offset: _ } => {
+            Node::LocalVariable { offset: _, ty: _ } => {
                 self.gen_asm_lval(f, node)?;
                 write!(f, "    pop rax\n")?;
                 write!(f, "    mov rax, [rax]\n")?;
