@@ -350,6 +350,13 @@ mod tests {
                               b = &a;
                               return *b;\
                           }", 2);
+        check_return_num("fn main() {\
+                              let a: i32;\
+                              let b: i32;\
+                              b = &a;\
+                              *b = 3;
+                              return a;\
+                          }", 3);
     }
 
     #[test]

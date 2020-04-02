@@ -51,6 +51,15 @@ impl AsmGenerator {
                 write!(f, "    push rax\n")?;
                 Ok(())
             },
+            Node::UnaryOperator { kind, node } => {
+                match kind {
+                    UnaryOpDrf => {
+                        self.gen_asm_node(f, node)?;
+                        Ok(())
+                    }
+                    _ => Err(Context),
+                }
+            },
             _ => Err(Context),
         }
     }
