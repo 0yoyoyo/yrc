@@ -219,6 +219,7 @@ fn new_node_ret(rhs: Box<Node>) -> Box<Node> {
 pub enum Type {
     Int,
     Ptr(Box<Type>),
+    Ary(Box<Type>, usize),
 }
 
 struct Lvar {
@@ -232,15 +233,49 @@ pub struct Parser {
     block_level: usize,
 }
 
+fn type_len(ty: &Type) -> usize {
+    match ty {
+        Type::Int => 4,
+        Type::Ptr(_ty) => 8,
+        Type::Ary(ty, len) => type_len(&*ty) * len,
+    }
+}
+
 impl Parser {
     pub fn get_stack_size(&mut self) -> usize {
-        8 * self.lvar_list.len()
+        let mut total = 0;
+        for lvar in &self.lvar_list {
+            match &lvar.ty {
+                Type::Int => total += 8,
+                Type::Ptr(_ty) => total += 8,
+                Type::Ary(ty, len) => total += type_len(&**ty) * len,
+            }
+        }
+        total
     }
 
     fn get_type(&mut self, tokens: &mut Tokens) -> Result<Type, ()> {
         if tokens.expect_op("*") {
             if let Ok(ty) = self.get_type(tokens) {
                 Ok(Type::Ptr(Box::new(ty)))
+            } else {
+                Err(())
+            }
+        } else if tokens.expect_op("[") {
+            if let Ok(ty) = self.get_type(tokens) {
+                if tokens.expect_op(";") {
+                    if let Some(num) = tokens.expect_num() {
+                        if tokens.expect_op("]") {
+                            Ok(Type::Ary(Box::new(ty), num as usize))
+                        } else {
+                            Err(())
+                        }
+                    } else {
+                        Err(())
+                    }
+                } else {
+                    Err(())
+                }
             } else {
                 Err(())
             }

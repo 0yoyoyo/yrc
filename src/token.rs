@@ -213,6 +213,7 @@ pub fn tokenize(formula: &str) -> Result<Vec<Token>, TokenError> {
             b'+' | b'-' |
             b'*' | b'/' |
             b'(' | b')' |
+            b'[' | b']' |
             b'{' | b'}' |
             b'&' | b',' |
             b':' | b';' => {
