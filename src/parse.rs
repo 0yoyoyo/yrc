@@ -233,52 +233,34 @@ pub struct Parser {
     block_level: usize,
 }
 
-fn type_len(ty: &Type) -> usize {
-    match ty {
-        Type::Int => 4,
-        Type::Ptr(_ty) => 8,
-        Type::Ary(ty, len) => type_len(&*ty) * len,
-    }
-}
-
 impl Parser {
-    pub fn get_stack_size(&mut self) -> usize {
-        let mut total = 0;
-        for lvar in &self.lvar_list {
-            match &lvar.ty {
-                Type::Int => total += 8,
-                Type::Ptr(_ty) => total += 8,
-                Type::Ary(ty, len) => total += type_len(&**ty) * len,
-            }
+    fn type_len(ty: &Type) -> usize {
+        match ty {
+            Type::Int => 4,
+            Type::Ptr(_ty) => 8,
+            Type::Ary(ty, len) => Self::type_len(&*ty) * len,
         }
-        total
     }
 
-    fn get_type(&mut self, tokens: &mut Tokens) -> Result<Type, ()> {
+    fn get_type(tokens: &mut Tokens) -> Result<Type, ()> {
         if tokens.expect_op("*") {
-            if let Ok(ty) = self.get_type(tokens) {
-                Ok(Type::Ptr(Box::new(ty)))
-            } else {
-                Err(())
-            }
+            Self::get_type(tokens).map(|ty| {
+                Type::Ptr(Box::new(ty))
+            })
         } else if tokens.expect_op("[") {
-            if let Ok(ty) = self.get_type(tokens) {
+            Self::get_type(tokens).and_then(|ty| {
                 if tokens.expect_op(";") {
-                    if let Some(num) = tokens.expect_num() {
+                    tokens.expect_num().ok_or(()).and_then(|num| {
                         if tokens.expect_op("]") {
                             Ok(Type::Ary(Box::new(ty), num as usize))
                         } else {
                             Err(())
                         }
-                    } else {
-                        Err(())
-                    }
+                    })
                 } else {
                     Err(())
                 }
-            } else {
-                Err(())
-            }
+            })
         } else {
             if tokens.expect_rsv("i32") {
                 Ok(Type::Int)
@@ -288,8 +270,20 @@ impl Parser {
         }
     }
 
+    pub fn get_stack_size(&mut self) -> usize {
+        let mut total = 0;
+        for lvar in &self.lvar_list {
+            match &lvar.ty {
+                Type::Int => total += 8,
+                Type::Ptr(_ty) => total += 8,
+                Type::Ary(ty, len) => total += Self::type_len(&**ty) * len,
+            }
+        }
+        total
+    }
+
     fn typ(&mut self, name: &str, tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
-        if let Ok(ty) = self.get_type(tokens) {
+        if let Ok(ty) = Self::get_type(tokens) {
             let offset = 8 * (self.lvar_list.len() + 1);
             let new = Lvar {
                 name: name.to_string(),
