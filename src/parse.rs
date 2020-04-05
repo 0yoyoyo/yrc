@@ -97,6 +97,11 @@ pub enum Node {
         offset: usize,
         ty: Type,
     },
+    GlobalVariable {
+        name: String,
+        size: usize,
+        ty: Type,
+    },
     Block {
         nodes: Vec<Box<Node>>,
     },
@@ -230,8 +235,15 @@ struct Lvar {
     offset: usize,
 }
 
+struct Gvar {
+    name: String,
+    ty: Type,
+    size: usize,
+}
+
 pub struct Parser {
     lvar_list: Vec<Lvar>,
+    gvar_list: Vec<Gvar>,
     block_level: usize,
 }
 
@@ -624,6 +636,7 @@ impl Parser {
     pub fn new() -> Self {
         Parser {
             lvar_list: Vec::new(),
+            gvar_list: Vec::new(),
             block_level: 0,
         }
     }
