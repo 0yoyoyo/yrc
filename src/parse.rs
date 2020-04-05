@@ -58,6 +58,8 @@ impl fmt::Display for ParseError {
     }
 }
 
+const WORDSIZE: usize = 8;
+
 #[derive(Debug, PartialEq)]
 pub enum BinaryOpKind {
     BinaryOpAdd,
@@ -235,13 +237,13 @@ pub struct Parser {
 
 impl Parser {
     fn align_word(n: usize) -> usize {
-        n + n % 8
+        n + n % WORDSIZE
     }
 
     fn type_len(ty: &Type) -> usize {
         match ty {
             Type::Int => 4,
-            Type::Ptr(_ty) => 8,
+            Type::Ptr(_ty) => WORDSIZE,
             Type::Ary(ty, len) => Self::type_len(&*ty) * len,
         }
     }
@@ -278,8 +280,8 @@ impl Parser {
         let mut total = 0;
         for lvar in &self.lvar_list {
             match &lvar.ty {
-                Type::Int => total += 8,
-                Type::Ptr(_ty) => total += 8,
+                Type::Int => total += WORDSIZE,
+                Type::Ptr(_ty) => total += WORDSIZE,
                 Type::Ary(ty, len) => { 
                     let size = Self::type_len(&**ty) * len;
                     total += Self::align_word(size);
