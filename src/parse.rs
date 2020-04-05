@@ -312,7 +312,21 @@ impl Parser {
         let mut i = 0;
         while let Some(lv) = self.lvar_list.get(i) {
             if lv.name == name.to_string() {
-                return Ok(new_node_var(lv.offset, lv.ty.clone()));
+                let mut offset = lv.offset;
+
+                if tokens.expect_op("[") {
+                    if let Some(num) = tokens.expect_num() {
+                        if tokens.expect_op("]") {
+                            offset = Self::type_len(&lv.ty) * num as usize;
+                        } else {
+                            return Err(ParseError::new(ParenExpected, tokens));
+                        }
+                    } else {
+                        return Err(ParseError::new(NumberExpected, tokens));
+                    }
+                }
+
+                return Ok(new_node_var(offset, lv.ty.clone()));
             }
             i += 1;
         }

@@ -360,6 +360,17 @@ mod tests {
     }
 
     #[test]
+    fn calc_array() {
+        check_return_num("fn main() {\
+                              let a: [i32; 10];\
+                              a[0] = 1;
+                              a[1] = 2;
+                              a[2] = 3;
+                              return a[0] + a[1] + a[2];\
+                          }", 6);
+    }
+
+    #[test]
     fn check_format() {
         check_return_num("fn main() { return 1+2+3; }", 6);
         check_return_num("fn main() { return  1 + 2 + 3 ; }", 6);
