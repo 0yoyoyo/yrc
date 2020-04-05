@@ -234,6 +234,10 @@ pub struct Parser {
 }
 
 impl Parser {
+    fn align_word(n: usize) -> usize {
+        n + n % 8
+    }
+
     fn type_len(ty: &Type) -> usize {
         match ty {
             Type::Int => 4,
@@ -276,7 +280,10 @@ impl Parser {
             match &lvar.ty {
                 Type::Int => total += 8,
                 Type::Ptr(_ty) => total += 8,
-                Type::Ary(ty, len) => total += Self::type_len(&**ty) * len,
+                Type::Ary(ty, len) => { 
+                    let size = Self::type_len(&**ty) * len;
+                    total += Self::align_word(size);
+                },
             }
         }
         total
@@ -284,7 +291,8 @@ impl Parser {
 
     fn typ(&mut self, name: &str, tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
         if let Ok(ty) = Self::get_type(tokens) {
-            let offset = 8 * (self.lvar_list.len() + 1);
+            let offset = self.get_stack_size()
+                         + Self::align_word(Self::type_len(&ty));
             let new = Lvar {
                 name: name.to_string(),
                 ty: ty.clone(),
