@@ -233,6 +233,21 @@ mod tests {
     }
 
     #[test]
+    fn calc_global_variable() {
+        check_return_num("static a: i32;
+                          fn main() {\
+                              a = 1;\
+                              return a;\
+                          }", 1);
+        check_return_num("static a: [i32; 10];
+                          fn main() {\
+                              a[8] = 1;\
+                              a[9] = 2;\
+                              return a[8] + a[9];\
+                          }", 3);
+    }
+
+    #[test]
     fn calc_control() {
         check_return_num("fn main() {\
                               let a: i32;\

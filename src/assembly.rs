@@ -51,6 +51,11 @@ impl AsmGenerator {
                 write!(f, "    push rax\n")?;
                 Ok(())
             },
+            Node::GlobalVariable { name, size, ty: _ } => {
+                write!(f, "    mov rax, OFFSET FLAT:{}+{}\n", name, size)?;
+                write!(f, "    push rax\n")?;
+                Ok(())
+            },
             Node::UnaryOperator { kind, node } => {
                 match kind {
                     UnaryOpDrf => {
@@ -139,10 +144,24 @@ impl AsmGenerator {
                 write!(f, "    mov rax, [rax]\n")?;
                 write!(f, "    push rax\n")?;
             },
+            Node::GlobalVariable { name: _, size: _, ty: _ } => {
+                self.gen_asm_lval(f, node)?;
+                write!(f, "    pop rax\n")?;
+                write!(f, "    mov rax, [rax]\n")?;
+                write!(f, "    push rax\n")?;
+            },
+            Node::DeclareGlobal { name, size, ty: _ } => {
+                write!(f, ".bss\n")?;
+                write!(f, ".global {}\n", name)?;
+                write!(f, "{}:\n", name)?;
+                write!(f, "    .zero {}\n", size)?;
+                write!(f, "\n")?;
+            },
             Node::Block { nodes } => {
                 self.gen_asm_block(f, nodes)?;
             },
             Node::Function { name, args, stack, block } => {
+                write!(f, ".text\n")?;
                 write!(f, ".global {}\n", name)?;
                 write!(f, "{}:\n", name)?;
 

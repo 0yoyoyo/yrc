@@ -102,6 +102,11 @@ pub enum Node {
         size: usize,
         ty: Type,
     },
+    DeclareGlobal {
+        name: String,
+        size: usize,
+        ty: Type,
+    },
     Block {
         nodes: Vec<Box<Node>>,
     },
@@ -157,9 +162,27 @@ fn new_node_num(val: u32) -> Box<Node> {
     Box::new(node)
 }
 
-fn new_node_var(offset: usize, ty: Type) -> Box<Node> {
+fn new_node_lvar(offset: usize, ty: Type) -> Box<Node> {
     let node = Node::LocalVariable {
         offset: offset,
+        ty: ty,
+    };
+    Box::new(node)
+}
+
+fn new_node_gvar(name: &str, size: usize, ty: Type) -> Box<Node> {
+    let node = Node::GlobalVariable {
+        name: name.to_string(),
+        size: size,
+        ty: ty,
+    };
+    Box::new(node)
+}
+
+fn new_node_decg(name: &str, size: usize, ty: Type) -> Box<Node> {
+    let node = Node::DeclareGlobal {
+        name: name.to_string(),
+        size: size,
         ty: ty,
     };
     Box::new(node)
@@ -303,18 +326,30 @@ impl Parser {
         total
     }
 
-    fn typ(&mut self, name: &str, tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
+    fn typ(&mut self, name: &str, tokens: &mut Tokens, is_global: bool) -> Result<Box<Node>, ParseError> {
         if let Ok(ty) = Self::get_type(tokens) {
-            let offset = self.get_stack_size()
-                         + Self::align_word(Self::type_len(&ty));
-            let new = Lvar {
-                name: name.to_string(),
-                ty: ty.clone(),
-                offset: offset,
-            };
-            self.lvar_list.push(new);
+            if is_global {
+                let size = Self::type_len(&ty);
+                let new = Gvar {
+                    name: name.to_string(),
+                    ty: ty.clone(),
+                    size: size,
+                };
+                self.gvar_list.push(new);
 
-            Ok(new_node_var(offset, ty))
+                Ok(new_node_decg(name, size, ty))
+            } else {
+                let offset = self.get_stack_size()
+                             + Self::align_word(Self::type_len(&ty));
+                let new = Lvar {
+                    name: name.to_string(),
+                    ty: ty.clone(),
+                    offset: offset,
+                };
+                self.lvar_list.push(new);
+
+                Ok(new_node_lvar(offset, ty))
+            }
         } else {
             Err(ParseError::new(TypeExpected, tokens))
         }
@@ -338,7 +373,28 @@ impl Parser {
                     }
                 }
 
-                return Ok(new_node_var(offset, lv.ty.clone()));
+                return Ok(new_node_lvar(offset, lv.ty.clone()));
+            }
+            i += 1;
+        }
+
+        while let Some(gv) = self.gvar_list.get(i) {
+            if gv.name == name.to_string() {
+                let mut size = 0;
+
+                if tokens.expect_op("[") {
+                    if let Some(num) = tokens.expect_num() {
+                        if tokens.expect_op("]") {
+                            size = Self::type_len(&gv.ty) * num as usize;
+                        } else {
+                            return Err(ParseError::new(ParenExpected, tokens));
+                        }
+                    } else {
+                        return Err(ParseError::new(NumberExpected, tokens));
+                    }
+                }
+
+                return Ok(new_node_gvar(name, size, gv.ty.clone()));
             }
             i += 1;
         }
@@ -346,13 +402,13 @@ impl Parser {
         Err(ParseError::new_with_offset(UnknownVariable, tokens, 1))
     }
 
-    fn bind(&mut self, tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
+    fn bind(&mut self, tokens: &mut Tokens, is_global: bool) -> Result<Box<Node>, ParseError> {
         if let Some(name) = tokens.expect_idt() {
             // Get ownership
             let name = &name.to_string();
 
             if tokens.expect_op(":") {
-                self.typ(name, tokens)
+                self.typ(name, tokens, is_global)
             } else {
                 Err(ParseError::new(TypeExpected, tokens))
             }
@@ -524,7 +580,7 @@ impl Parser {
                     let name = &name.to_string();
 
                     if tokens.expect_op(":") {
-                        let node = self.typ(name, tokens)?;
+                        let node = self.typ(name, tokens, false)?;
                         args.push(node);
                     } else {
                         return Err(ParseError::new(TypeExpected, tokens));
@@ -603,7 +659,9 @@ impl Parser {
             node = self.whl(tokens)?;
             return Ok(node);
         } else if tokens.expect_rsv("let") {
-            node = self.bind(tokens)?;
+            node = self.bind(tokens, false)?;
+        } else if tokens.expect_rsv("static") {
+            node = self.bind(tokens, true)?;
         } else if tokens.expect_rsv("return") {
             let rhs = self.expr(tokens)?;
             node = new_node_ret(rhs);
