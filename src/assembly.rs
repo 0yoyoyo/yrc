@@ -51,8 +51,8 @@ impl AsmGenerator {
                 write!(f, "    push rax\n")?;
                 Ok(())
             },
-            Node::GlobalVariable { name, size, ty: _ } => {
-                write!(f, "    mov rax, OFFSET FLAT:{}+{}\n", name, size)?;
+            Node::GlobalVariable { name, offset, ty: _ } => {
+                write!(f, "    mov rax, OFFSET FLAT:{}+{}\n", name, offset)?;
                 write!(f, "    push rax\n")?;
                 Ok(())
             },
@@ -144,7 +144,7 @@ impl AsmGenerator {
                 write!(f, "    mov rax, [rax]\n")?;
                 write!(f, "    push rax\n")?;
             },
-            Node::GlobalVariable { name: _, size: _, ty: _ } => {
+            Node::GlobalVariable { name: _, offset: _, ty: _ } => {
                 self.gen_asm_lval(f, node)?;
                 write!(f, "    pop rax\n")?;
                 write!(f, "    mov rax, [rax]\n")?;

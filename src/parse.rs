@@ -99,7 +99,7 @@ pub enum Node {
     },
     GlobalVariable {
         name: String,
-        size: usize,
+        offset: usize,
         ty: Type,
     },
     DeclareGlobal {
@@ -170,10 +170,10 @@ fn new_node_lvar(offset: usize, ty: Type) -> Box<Node> {
     Box::new(node)
 }
 
-fn new_node_gvar(name: &str, size: usize, ty: Type) -> Box<Node> {
+fn new_node_gvar(name: &str, offset: usize, ty: Type) -> Box<Node> {
     let node = Node::GlobalVariable {
         name: name.to_string(),
-        size: size,
+        offset: offset,
         ty: ty,
     };
     Box::new(node)
@@ -261,7 +261,6 @@ struct Lvar {
 struct Gvar {
     name: String,
     ty: Type,
-    size: usize,
 }
 
 pub struct Parser {
@@ -333,7 +332,6 @@ impl Parser {
                 let new = Gvar {
                     name: name.to_string(),
                     ty: ty.clone(),
-                    size: size,
                 };
                 self.gvar_list.push(new);
 
@@ -355,7 +353,7 @@ impl Parser {
         }
     }
 
-    fn lvar(&mut self, name: &str, tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
+    fn var(&mut self, name: &str, tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
         let mut i = 0;
         while let Some(lv) = self.lvar_list.get(i) {
             if lv.name == name.to_string() {
@@ -380,12 +378,12 @@ impl Parser {
 
         while let Some(gv) = self.gvar_list.get(i) {
             if gv.name == name.to_string() {
-                let mut size = 0;
+                let mut offset = 0;
 
                 if tokens.expect_op("[") {
                     if let Some(num) = tokens.expect_num() {
                         if tokens.expect_op("]") {
-                            size = Self::type_len(&gv.ty) * num as usize;
+                            offset = Self::type_len(&gv.ty) * num as usize;
                         } else {
                             return Err(ParseError::new(ParenExpected, tokens));
                         }
@@ -394,7 +392,7 @@ impl Parser {
                     }
                 }
 
-                return Ok(new_node_gvar(name, size, gv.ty.clone()));
+                return Ok(new_node_gvar(name, offset, gv.ty.clone()));
             }
             i += 1;
         }
@@ -454,7 +452,7 @@ impl Parser {
 
                 Ok(new_node_call(name, args))
             } else {
-                self.lvar(name, tokens)
+                self.var(name, tokens)
             }
         } else {
             let num = tokens.expect_num()
