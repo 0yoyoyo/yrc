@@ -8,7 +8,8 @@ fi
 
 cd output
 
-gcc $NAME.s -o $NAME
+OPTION="-no-pie"
+gcc $NAME.s -o $NAME $OPTION
 ./$NAME
 RESULT="$?"
 
