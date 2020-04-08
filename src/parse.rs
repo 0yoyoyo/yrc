@@ -381,6 +381,7 @@ impl Parser {
             i += 1;
         }
 
+        i = 0;
         while let Some(gv) = self.gvar_list.get(i) {
             if gv.name == name.to_string() {
                 let mut offset = 0;
