@@ -118,7 +118,7 @@ impl AsmGenerator {
                         write!(f, "    movzb rax, al\n")?;
                     },
                     BinaryOpAsn => {
-                        write!(f, "    mov [rax], rdi\n")?;
+                        write!(f, "    mov DWORD PTR [rax], edi\n")?;
                         // Is this code needed?
                         //write!(f, "    push rdi\n")?;
                     },

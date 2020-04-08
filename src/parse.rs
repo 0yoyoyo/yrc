@@ -16,6 +16,7 @@ pub enum ParseErrorKind {
     ParenExpected,
     ScolonExpected,
     BlockExpected,
+    TypeInvalid,
     UnknownVariable,
 }
 
@@ -53,6 +54,7 @@ impl fmt::Display for ParseError {
             ParenExpected => write!(f, "Parentheses are not closed!"),
             ScolonExpected => write!(f, "Semicolon is needed!"),
             BlockExpected => write!(f, "Block is expected here!"),
+            TypeInvalid => write!(f, "Invalid Type!"),
             UnknownVariable => write!(f, "Unknown variable!"),
         }
     }
@@ -362,7 +364,10 @@ impl Parser {
                 if tokens.expect_op("[") {
                     if let Some(num) = tokens.expect_num() {
                         if tokens.expect_op("]") {
-                            offset = Self::type_len(&lv.ty) * num as usize;
+                            match &lv.ty {
+                                Type::Ary(ty, _) => offset = Self::type_len(&**ty) * (num + 1) as usize,
+                                _ => return Err(ParseError::new_with_offset(TypeInvalid, tokens, 4)),
+                            }
                         } else {
                             return Err(ParseError::new(ParenExpected, tokens));
                         }

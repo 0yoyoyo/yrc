@@ -383,6 +383,14 @@ mod tests {
                               a[2] = 3;
                               return a[0] + a[1] + a[2];\
                           }", 6);
+        check_return_num("fn foo() {\
+                              let a: [i32; 4];\
+                              a[2] = 3;
+                              return a[2];\
+                          }\
+                          fn main() {\
+                              return foo();\
+                          }", 3);
     }
 
     #[test]
