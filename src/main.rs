@@ -234,18 +234,18 @@ mod tests {
 
     #[test]
     fn calc_global_variable() {
-        check_return_num("static a: i32;
+        check_return_num("static a: i32;\
                           fn main() {\
                               a = 1;\
                               return a;\
                           }", 1);
-        check_return_num("static a: [i32; 10];
+        check_return_num("static a: [i32; 10];\
                           fn main() {\
                               a[8] = 1;\
                               a[9] = 2;\
                               return a[8] + a[9];\
                           }", 3);
-        check_return_num("static a: i32;
+        check_return_num("static a: i32;\
                           fn main() {\
                               let b: i32;\
                               a = 1;\
@@ -385,14 +385,14 @@ mod tests {
     fn calc_array() {
         check_return_num("fn main() {\
                               let a: [i32; 10];\
-                              a[0] = 1;
-                              a[1] = 2;
-                              a[2] = 3;
+                              a[0] = 1;\
+                              a[1] = 2;\
+                              a[2] = 3;\
                               return a[0] + a[1] + a[2];\
                           }", 6);
         check_return_num("fn foo() {\
                               let a: [i32; 4];\
-                              a[2] = 3;
+                              a[2] = 3;\
                               return a[2];\
                           }\
                           fn main() {\
