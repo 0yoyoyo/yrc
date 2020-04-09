@@ -252,6 +252,13 @@ mod tests {
                               b = 2;\
                               return a + b;\
                           }", 3);
+        check_return_num("static a: [i32; 2];\
+                          static b: [i32; 2];\
+                          fn main() {\
+                              a[1] = 1;\
+                              b[0] = 2;\
+                              return a[1] + b[0];\
+                          }", 3);
     }
 
     #[test]

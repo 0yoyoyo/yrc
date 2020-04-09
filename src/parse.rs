@@ -389,7 +389,10 @@ impl Parser {
                 if tokens.expect_op("[") {
                     if let Some(num) = tokens.expect_num() {
                         if tokens.expect_op("]") {
-                            offset = Self::type_len(&gv.ty) * num as usize;
+                            match &gv.ty {
+                                Type::Ary(ty, _) => offset = Self::type_len(&**ty) * num as usize,
+                                _ => return Err(ParseError::new_with_offset(TypeInvalid, tokens, 4)),
+                            }
                         } else {
                             return Err(ParseError::new(ParenExpected, tokens));
                         }
