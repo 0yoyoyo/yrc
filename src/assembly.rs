@@ -6,6 +6,8 @@ use std::io::prelude::*;
 use super::parse::Node;
 use super::parse::BinaryOpKind::*;
 use super::parse::UnaryOpKind::*;
+use super::parse::Type;
+use super::parse::WORDSIZE;
 
 use AsmError::*;
 
@@ -28,6 +30,34 @@ impl From<io::Error> for AsmError {
     fn from(e: io::Error) -> Self {
         AsmError::Io(e)
     }
+}
+
+fn type_len(ty: &Type) -> usize {
+    match ty {
+        Type::Int => 4,
+        Type::Ptr(_ty) => WORDSIZE,
+        Type::Ary(ty, _len) => type_len(&*ty),
+    }
+}
+
+fn get_size(node: &Box<Node>) -> usize {
+        match &**node {
+            Node::LocalVariable { offset: _, ty } => {
+                type_len(&ty)
+            },
+            Node::GlobalVariable { name: _, offset: _, ty } => {
+                type_len(&ty)
+            },
+            Node::UnaryOperator { kind, node } => {
+                match kind {
+                    UnaryOpDrf => {
+                        get_size(&node)
+                    }
+                    _ => unreachable!(),
+                }
+            },
+            _ => unreachable!(),
+        }
 }
 
 pub struct AsmGenerator {
@@ -75,7 +105,9 @@ impl AsmGenerator {
                 write!(f, "    push {}\n", val)?;
             },
             Node::BinaryOperator { kind, lhs, rhs } => {
+                let mut size = 0;
                 if kind == BinaryOpAsn {
+                    size = get_size(&lhs);
                     self.gen_asm_lval(f, lhs)?;
                 } else {
                     self.gen_asm_node(f, lhs)?;
@@ -118,7 +150,11 @@ impl AsmGenerator {
                         write!(f, "    movzb rax, al\n")?;
                     },
                     BinaryOpAsn => {
-                        write!(f, "    mov DWORD PTR [rax], edi\n")?;
+                        if size == 4 {
+                            write!(f, "    mov DWORD PTR [rax], edi\n")?;
+                        } else {
+                            write!(f, "    mov QWORD PTR [rax], rdi\n")?;
+                        }
                         // Is this code needed?
                         //write!(f, "    push rdi\n")?;
                     },

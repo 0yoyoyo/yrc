@@ -60,7 +60,7 @@ impl fmt::Display for ParseError {
     }
 }
 
-const WORDSIZE: usize = 8;
+pub const WORDSIZE: usize = 8;
 
 #[derive(Debug, PartialEq)]
 pub enum BinaryOpKind {
