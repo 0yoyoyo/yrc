@@ -184,15 +184,37 @@ impl AsmGenerator {
                 }
             },
             Node::LocalVariable { offset: _, ty: _ } => {
+                let size = get_size(&node);
                 self.gen_asm_lval(f, node)?;
                 write!(f, "    pop rax\n")?;
-                write!(f, "    mov rax, [rax]\n")?;
+                if size == 1 {
+                    write!(f, "    mov al, BYTE PTR [rax]\n")?;
+                } else if size == 2 {
+                    write!(f, "    mov ax, WORD PTR [rax]\n")?;
+                } else if size == 4 {
+                    write!(f, "    mov eax, DWORD PTR [rax]\n")?;
+                } else if size == 8 {
+                    write!(f, "    mov rax, QWORD PTR [rax]\n")?;
+                } else {
+                    unreachable!();
+                }
                 write!(f, "    push rax\n")?;
             },
             Node::GlobalVariable { name: _, offset: _, ty: _ } => {
+                let size = get_size(&node);
                 self.gen_asm_lval(f, node)?;
                 write!(f, "    pop rax\n")?;
-                write!(f, "    mov rax, [rax]\n")?;
+                if size == 1 {
+                    write!(f, "    mov al, BYTE PTR [rax]\n")?;
+                } else if size == 2 {
+                    write!(f, "    mov ax, WORD PTR [rax]\n")?;
+                } else if size == 4 {
+                    write!(f, "    mov eax, DWORD PTR [rax]\n")?;
+                } else if size == 8 {
+                    write!(f, "    mov rax, QWORD PTR [rax]\n")?;
+                } else {
+                    unreachable!();
+                }
                 write!(f, "    push rax\n")?;
             },
             Node::DeclareGlobal { name, size, ty: _ } => {
@@ -215,11 +237,25 @@ impl AsmGenerator {
                 write!(f, "    sub rsp, {}\n", stack)?;
 
                 let mut iter = args.into_iter().enumerate();
-                let arg_regs = ["rdi", "rsi", "rdx", "rcx", "r8", "r9"];
+                let arg_regs_64 = ["rdi", "rsi", "rdx", "rcx", "r8", "r9"];
+                let arg_regs_32 = ["edi", "esi", "edx", "ecx", "r8d", "r9d"];
+                let arg_regs_16 = ["di", "si", "dx", "cx", "r8d", "r9d"];
+                let arg_regs_8 = ["dil", "sil", "dl", "cl", "r8d", "r9d"];
                 while let Some((cnt, node)) = iter.next() {
+                    let size = get_size(&node);
                     self.gen_asm_lval(f, node)?;
                     write!(f, "    pop rax\n")?;
-                    write!(f, "    mov [rax], {}\n", arg_regs[cnt])?;
+                    if size == 1 {
+                        write!(f, "    mov BYTE PTR [rax], {}\n", arg_regs_8[cnt])?;
+                    } else if size == 2 {
+                        write!(f, "    mov WORD PTR [rax], {}\n", arg_regs_16[cnt])?;
+                    } else if size == 4 {
+                        write!(f, "    mov DWORD PTR [rax], {}\n", arg_regs_32[cnt])?;
+                    } else if size == 8 {
+                        write!(f, "    mov QWORD PTR [rax], {}\n", arg_regs_64[cnt])?;
+                    } else {
+                        unreachable!();
+                    }
                 }
 
                 self.gen_asm_node(f, block)?;
