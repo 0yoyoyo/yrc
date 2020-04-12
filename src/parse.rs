@@ -249,7 +249,10 @@ fn new_node_ret(rhs: Box<Node>) -> Box<Node> {
 
 #[derive(Debug, Clone)]
 pub enum Type {
-    Int,
+    Int8,
+    Int16,
+    Int32,
+    Int64,
     Ptr(Box<Type>),
     Ary(Box<Type>, usize),
 }
@@ -278,7 +281,10 @@ impl Parser {
 
     fn type_len(ty: &Type) -> usize {
         match ty {
-            Type::Int => 4,
+            Type::Int8 => 1,
+            Type::Int16 => 2,
+            Type::Int32 => 4,
+            Type::Int64 => 8,
             Type::Ptr(_ty) => WORDSIZE,
             Type::Ary(ty, len) => Self::type_len(&*ty) * len,
         }
@@ -304,8 +310,14 @@ impl Parser {
                 }
             })
         } else {
-            if tokens.expect_rsv("i32") {
-                Ok(Type::Int)
+            if tokens.expect_rsv("i8") {
+                Ok(Type::Int8)
+            } else if tokens.expect_rsv("i16") {
+                Ok(Type::Int16)
+            } else if tokens.expect_rsv("i32") {
+                Ok(Type::Int32)
+            } else if tokens.expect_rsv("i64") {
+                Ok(Type::Int64)
             } else {
                 Err(())
             }
@@ -316,7 +328,8 @@ impl Parser {
         let mut total = 0;
         for lvar in &self.lvar_list {
             match &lvar.ty {
-                Type::Int => total += WORDSIZE,
+                Type::Int8 | Type::Int16 |
+                Type::Int32 | Type::Int64 => total += WORDSIZE,
                 Type::Ptr(_ty) => total += WORDSIZE,
                 Type::Ary(ty, len) => { 
                     let size = Self::type_len(&**ty) * len;

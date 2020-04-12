@@ -191,7 +191,10 @@ fn lex_word(bytes: &[u8], cur: &mut usize) -> Token {
                name == "continue".to_string() ||
                name == "return"  .to_string() {
                 return Token::new(TokenRsv(name), pos);
-            } else if name == "i32".to_string() {
+            } else if name == "i8" .to_string() ||
+                      name == "i16".to_string() ||
+                      name == "i32".to_string() ||
+                      name == "i64".to_string() {
                 return Token::new(TokenRsv(name), pos);
             } else {
                 return Token::new(TokenIdt(name), pos);

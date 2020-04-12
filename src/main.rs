@@ -233,6 +233,30 @@ mod tests {
     }
 
     #[test]
+    fn calc_type() {
+        check_return_num("fn main() {\
+                              let a: i8;\
+                              a = 1;\
+                              return a;\
+                          }", 1);
+        check_return_num("fn main() {\
+                              let a: i16;\
+                              a = 1;\
+                              return a;\
+                          }", 1);
+        check_return_num("fn main() {\
+                              let a: i32;\
+                              a = 1;\
+                              return a;\
+                          }", 1);
+        check_return_num("fn main() {\
+                              let a: i64;\
+                              a = 1;\
+                              return a;\
+                          }", 1);
+    }
+
+    #[test]
     fn calc_global_variable() {
         check_return_num("static a: i32;\
                           fn main() {\

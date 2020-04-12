@@ -34,7 +34,10 @@ impl From<io::Error> for AsmError {
 
 fn type_len(ty: &Type) -> usize {
     match ty {
-        Type::Int => 4,
+        Type::Int8 => 1,
+        Type::Int16 => 2,
+        Type::Int32 => 4,
+        Type::Int64 => 8,
         Type::Ptr(_ty) => WORDSIZE,
         Type::Ary(ty, _len) => type_len(&*ty),
     }
@@ -150,10 +153,16 @@ impl AsmGenerator {
                         write!(f, "    movzb rax, al\n")?;
                     },
                     BinaryOpAsn => {
-                        if size == 4 {
+                        if size == 1 {
+                            write!(f, "    mov BYTE PTR [rax], dil\n")?;
+                        } else if size == 2 {
+                            write!(f, "    mov WORD PTR [rax], di\n")?;
+                        } else if size == 4 {
                             write!(f, "    mov DWORD PTR [rax], edi\n")?;
-                        } else {
+                        } else if size == 8 {
                             write!(f, "    mov QWORD PTR [rax], rdi\n")?;
+                        } else {
+                            unreachable!();
                         }
                         // Is this code needed?
                         //write!(f, "    push rdi\n")?;
