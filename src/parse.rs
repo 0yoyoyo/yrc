@@ -328,13 +328,12 @@ impl Parser {
         let mut total = 0;
         for lvar in &self.lvar_list {
             match &lvar.ty {
-                Type::Int8 | Type::Int16 |
-                Type::Int32 | Type::Int64 => total += WORDSIZE,
+                Type::Int8 => total += 1,
+                Type::Int16 => total += 2,
+                Type::Int32 => total += 4,
+                Type::Int64 => total += 8,
                 Type::Ptr(_ty) => total += WORDSIZE,
-                Type::Ary(ty, len) => { 
-                    let size = Self::type_len(&**ty) * len;
-                    total += Self::align_word(size);
-                },
+                Type::Ary(ty, len) => total += Self::type_len(&**ty) * len,
             }
         }
         total
@@ -352,8 +351,7 @@ impl Parser {
 
                 Ok(new_node_decg(name, size, ty))
             } else {
-                let offset = self.get_stack_size()
-                             + Self::align_word(Self::type_len(&ty));
+                let offset = self.get_stack_size() + Self::type_len(&ty);
                 let new = Lvar {
                     name: name.to_string(),
                     ty: ty.clone(),
@@ -618,7 +616,7 @@ impl Parser {
             }
             let block = self.blk(tokens)?;
 
-            let stack = self.get_stack_size();
+            let stack = Self::align_word(self.get_stack_size());
             self.lvar_list.clear();
 
             Ok(new_node_func(name, args, stack, block))
