@@ -276,7 +276,7 @@ pub struct Parser {
 
 impl Parser {
     fn align_word(n: usize) -> usize {
-        n + n % WORDSIZE
+        n + (WORDSIZE - n % WORDSIZE)
     }
 
     fn type_len(ty: &Type) -> usize {
