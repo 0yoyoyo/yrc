@@ -11,6 +11,11 @@ use super::parse::WORDSIZE;
 
 use AsmError::*;
 
+const ARG_REGS_64: [&str; 6] = ["rdi", "rsi", "rdx", "rcx",  "r8",  "r9"];
+const ARG_REGS_32: [&str; 6] = ["edi", "esi", "edx", "ecx", "r8d", "r9d"];
+const ARG_REGS_16: [&str; 6] = [ "di",  "si",  "dx",  "cx", "r8d", "r9d"];
+const ARG_REGS_8:  [&str; 6] = ["dil", "sil",  "dl",  "cl", "r8d", "r9d"];
+
 #[derive(Debug)]
 pub enum AsmError {
     Io(io::Error),
@@ -264,22 +269,18 @@ impl AsmGenerator {
                 write!(f, "    sub rsp, {}\n", stack)?;
 
                 let mut iter = args.into_iter().enumerate();
-                let arg_regs_64 = ["rdi", "rsi", "rdx", "rcx", "r8", "r9"];
-                let arg_regs_32 = ["edi", "esi", "edx", "ecx", "r8d", "r9d"];
-                let arg_regs_16 = ["di", "si", "dx", "cx", "r8d", "r9d"];
-                let arg_regs_8 = ["dil", "sil", "dl", "cl", "r8d", "r9d"];
                 while let Some((cnt, node)) = iter.next() {
                     let size = get_size(&node);
                     self.gen_asm_lval(f, node)?;
                     write!(f, "    pop rax\n")?;
                     if size == 1 {
-                        write!(f, "    mov BYTE PTR [rax], {}\n", arg_regs_8[cnt])?;
+                        write!(f, "    mov BYTE PTR [rax], {}\n", ARG_REGS_8[cnt])?;
                     } else if size == 2 {
-                        write!(f, "    mov WORD PTR [rax], {}\n", arg_regs_16[cnt])?;
+                        write!(f, "    mov WORD PTR [rax], {}\n", ARG_REGS_16[cnt])?;
                     } else if size == 4 {
-                        write!(f, "    mov DWORD PTR [rax], {}\n", arg_regs_32[cnt])?;
+                        write!(f, "    mov DWORD PTR [rax], {}\n", ARG_REGS_32[cnt])?;
                     } else if size == 8 {
-                        write!(f, "    mov QWORD PTR [rax], {}\n", arg_regs_64[cnt])?;
+                        write!(f, "    mov QWORD PTR [rax], {}\n", ARG_REGS_64[cnt])?;
                     } else {
                         unreachable!();
                     }
@@ -291,11 +292,10 @@ impl AsmGenerator {
             },
             Node::Call { name, args } => {
                 let mut iter = args.into_iter().enumerate();
-                let arg_regs = ["rdi", "rsi", "rdx", "rcx", "r8", "r9"];
                 while let Some((cnt, node)) = iter.next() {
                     self.gen_asm_node(f, node)?;
                     write!(f, "    pop rax\n")?;
-                    write!(f, "    mov {}, rax\n", arg_regs[cnt])?;
+                    write!(f, "    mov {}, rax\n", ARG_REGS_64[cnt])?;
                 }
 
                 write!(f, "    call {}\n", name)?;
