@@ -49,50 +49,50 @@ fn type_len(ty: &Type) -> usize {
 }
 
 fn get_base_type(node: &Box<Node>) -> &Type {
-        match &**node {
-            Node::LocalVariable { offset: _, ty } => {
-                if let Type::Ptr(base_ty) = ty {
-                    base_ty
-                } else {
-                    unreachable!();
-                }
-            },
-            Node::GlobalVariable { name: _, offset: _, ty } => {
-                if let Type::Ptr(base_ty) = ty {
-                    base_ty
-                } else {
-                    unreachable!();
-                }
-            },
-            Node::UnaryOperator { kind, rhs } => {
-                match kind {
-                    UnaryOpDrf => get_base_type(&rhs),
-                    _ => unreachable!(),
-                }
-            },
-            _ => unreachable!(),
-        }
+    match &**node {
+        Node::LocalVariable { offset: _, ty } => {
+            if let Type::Ptr(base_ty) = ty {
+                base_ty
+            } else {
+                unreachable!();
+            }
+        },
+        Node::GlobalVariable { name: _, offset: _, ty } => {
+            if let Type::Ptr(base_ty) = ty {
+                base_ty
+            } else {
+                unreachable!();
+            }
+        },
+        Node::UnaryOperator { kind, rhs } => {
+            match kind {
+                UnaryOpDrf => get_base_type(&rhs),
+                _ => unreachable!(),
+            }
+        },
+        _ => unreachable!(),
+    }
 }
 
 fn get_size(node: &Box<Node>) -> usize {
-        match &**node {
-            Node::LocalVariable { offset: _, ty } => {
-                type_len(&ty)
-            },
-            Node::GlobalVariable { name: _, offset: _, ty } => {
-                type_len(&ty)
-            },
-            Node::UnaryOperator { kind, rhs } => {
-                match kind {
-                    UnaryOpDrf => {
-                        let ty = get_base_type(rhs);
-                        type_len(&ty)
-                    }
-                    _ => unreachable!(),
+    match &**node {
+        Node::LocalVariable { offset: _, ty } => {
+            type_len(&ty)
+        },
+        Node::GlobalVariable { name: _, offset: _, ty } => {
+            type_len(&ty)
+        },
+        Node::UnaryOperator { kind, rhs } => {
+            match kind {
+                UnaryOpDrf => {
+                    let ty = get_base_type(rhs);
+                    type_len(&ty)
                 }
-            },
-            _ => unreachable!(),
-        }
+                _ => unreachable!(),
+            }
+        },
+        _ => unreachable!(),
+    }
 }
 
 pub struct AsmGenerator {
