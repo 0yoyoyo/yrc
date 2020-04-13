@@ -88,7 +88,7 @@ fn compile_to_fname(formula: &str, fname: &str) -> Result<(), CompileError> {
     let mut f = File::create(format!("{}/{}.s", OUTPUT_DIR, fname))?;
 
     let mut generator = AsmGenerator::new();
-    generator.gen_asm(&mut f, nodes)?;
+    generator.gen_asm(&mut f, &nodes)?;
 
     Ok(())
 }

@@ -90,7 +90,7 @@ pub enum Node {
     },
     UnaryOperator {
         kind: UnaryOpKind,
-        node: Box<Node>,
+        rhs: Box<Node>,
     },
     Number {
         val: u32,
@@ -149,10 +149,10 @@ fn new_node_bop(kind: BinaryOpKind, lhs: Box<Node>, rhs: Box<Node>) -> Box<Node>
     Box::new(node)
 }
 
-fn new_node_uop(kind: UnaryOpKind, node: Box<Node>) -> Box<Node> {
+fn new_node_uop(kind: UnaryOpKind, rhs: Box<Node>) -> Box<Node> {
     let node = Node::UnaryOperator {
         kind: kind,
-        node: node,
+        rhs: rhs,
     };
     Box::new(node)
 }
@@ -484,10 +484,10 @@ impl Parser {
     fn unary(&mut self, tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
         if tokens.expect_op("&") {
             self.unary(tokens)
-                .map(|node| new_node_uop(UnaryOpRf, node))
+                .map(|rhs| new_node_uop(UnaryOpRf, rhs))
         } else if tokens.expect_op("*") {
             self.unary(tokens)
-                .map(|node| new_node_uop(UnaryOpDrf, node))
+                .map(|rhs| new_node_uop(UnaryOpDrf, rhs))
         } else if tokens.expect_op("-") {
             self.primary(tokens)
                 .map(|rhs| new_node_bop(BinaryOpSub, new_node_num(0), rhs))

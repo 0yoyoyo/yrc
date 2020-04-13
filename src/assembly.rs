@@ -64,9 +64,9 @@ fn get_base_type(node: &Box<Node>) -> &Type {
                     unreachable!();
                 }
             },
-            Node::UnaryOperator { kind, node } => {
+            Node::UnaryOperator { kind, rhs } => {
                 match kind {
-                    UnaryOpDrf => get_base_type(&node),
+                    UnaryOpDrf => get_base_type(&rhs),
                     _ => unreachable!(),
                 }
             },
@@ -82,10 +82,10 @@ fn get_size(node: &Box<Node>) -> usize {
             Node::GlobalVariable { name: _, offset: _, ty } => {
                 type_len(&ty)
             },
-            Node::UnaryOperator { kind, node } => {
+            Node::UnaryOperator { kind, rhs } => {
                 match kind {
                     UnaryOpDrf => {
-                        let ty = get_base_type(&node);
+                        let ty = get_base_type(rhs);
                         type_len(&ty)
                     }
                     _ => unreachable!(),
@@ -100,7 +100,7 @@ pub struct AsmGenerator {
 }
 
 impl AsmGenerator {
-    fn gen_asm_block(&mut self, f: &mut File, nodes: Vec<Box<Node>>) -> Result<(), AsmError> {
+    fn gen_asm_block(&mut self, f: &mut File, nodes: &Vec<Box<Node>>) -> Result<(), AsmError> {
         let mut iter = nodes.into_iter();
         while let Some(node) = iter.next() {
             self.gen_asm_node(f, node)?;
@@ -108,8 +108,8 @@ impl AsmGenerator {
         Ok(())
     }
 
-    fn gen_asm_lval(&mut self, f: &mut File, node: Box<Node>) -> Result<(), AsmError> {
-        match *node {
+    fn gen_asm_lval(&mut self, f: &mut File, node: &Box<Node>) -> Result<(), AsmError> {
+        match &**node {
             Node::LocalVariable { offset, ty: _ } => {
                 write!(f, "    mov rax, rbp\n")?;
                 write!(f, "    sub rax, {}\n", offset)?;
@@ -121,10 +121,10 @@ impl AsmGenerator {
                 write!(f, "    push rax\n")?;
                 Ok(())
             },
-            Node::UnaryOperator { kind, node } => {
+            Node::UnaryOperator { kind, rhs } => {
                 match kind {
                     UnaryOpDrf => {
-                        self.gen_asm_node(f, node)?;
+                        self.gen_asm_node(f, rhs)?;
                         Ok(())
                     }
                     _ => Err(Context),
@@ -134,15 +134,13 @@ impl AsmGenerator {
         }
     }
 
-    fn gen_asm_node(&mut self, f: &mut File, node: Box<Node>) -> Result<(), AsmError> {
-        match *node {
+    fn gen_asm_node(&mut self, f: &mut File, node: &Box<Node>) -> Result<(), AsmError> {
+        match &**node {
             Node::Number { val } => {
                 write!(f, "    push {}\n", val)?;
             },
             Node::BinaryOperator { kind, lhs, rhs } => {
-                let mut size = 0;
-                if kind == BinaryOpAsn {
-                    size = get_size(&lhs);
+                if *kind == BinaryOpAsn {
                     self.gen_asm_lval(f, lhs)?;
                 } else {
                     self.gen_asm_node(f, lhs)?;
@@ -185,16 +183,12 @@ impl AsmGenerator {
                         write!(f, "    movzb rax, al\n")?;
                     },
                     BinaryOpAsn => {
-                        if size == 1 {
-                            write!(f, "    mov BYTE PTR [rax], dil\n")?;
-                        } else if size == 2 {
-                            write!(f, "    mov WORD PTR [rax], di\n")?;
-                        } else if size == 4 {
-                            write!(f, "    mov DWORD PTR [rax], edi\n")?;
-                        } else if size == 8 {
-                            write!(f, "    mov QWORD PTR [rax], rdi\n")?;
-                        } else {
-                            unreachable!();
+                        match get_size(lhs) {
+                            1 => write!(f, "    mov BYTE PTR [rax], dil\n")?,
+                            2 => write!(f, "    mov WORD PTR [rax], di\n")?,
+                            4 => write!(f, "    mov DWORD PTR [rax], edi\n")?,
+                            8 => write!(f, "    mov QWORD PTR [rax], rdi\n")?,
+                            _ => unreachable!(),
                         }
                         // Is this code needed?
                         //write!(f, "    push rdi\n")?;
@@ -202,13 +196,13 @@ impl AsmGenerator {
                 }
                 write!(f, "    push rax\n")?;
             },
-            Node::UnaryOperator { kind, node } => {
+            Node::UnaryOperator { kind, rhs } => {
                 match kind {
                     UnaryOpRf => {
-                        self.gen_asm_lval(f, node)?;
+                        self.gen_asm_lval(f, rhs)?;
                     }
                     UnaryOpDrf => {
-                        self.gen_asm_node(f, node)?;
+                        self.gen_asm_node(f, rhs)?;
                         write!(f, "    pop rax\n")?;
                         write!(f, "    mov rax, [rax]\n")?;
                         write!(f, "    push rax\n")?;
@@ -216,36 +210,26 @@ impl AsmGenerator {
                 }
             },
             Node::LocalVariable { offset: _, ty: _ } => {
-                let size = get_size(&node);
                 self.gen_asm_lval(f, node)?;
                 write!(f, "    pop rax\n")?;
-                if size == 1 {
-                    write!(f, "    mov al, BYTE PTR [rax]\n")?;
-                } else if size == 2 {
-                    write!(f, "    mov ax, WORD PTR [rax]\n")?;
-                } else if size == 4 {
-                    write!(f, "    mov eax, DWORD PTR [rax]\n")?;
-                } else if size == 8 {
-                    write!(f, "    mov rax, QWORD PTR [rax]\n")?;
-                } else {
-                    unreachable!();
+                match get_size(node) {
+                    1 => write!(f, "    mov al, BYTE PTR [rax]\n")?,
+                    2 => write!(f, "    mov ax, WORD PTR [rax]\n")?,
+                    4 => write!(f, "    mov eax, DWORD PTR [rax]\n")?,
+                    8 => write!(f, "    mov rax, QWORD PTR [rax]\n")?,
+                    _ => unreachable!(),
                 }
                 write!(f, "    push rax\n")?;
             },
             Node::GlobalVariable { name: _, offset: _, ty: _ } => {
-                let size = get_size(&node);
                 self.gen_asm_lval(f, node)?;
                 write!(f, "    pop rax\n")?;
-                if size == 1 {
-                    write!(f, "    mov al, BYTE PTR [rax]\n")?;
-                } else if size == 2 {
-                    write!(f, "    mov ax, WORD PTR [rax]\n")?;
-                } else if size == 4 {
-                    write!(f, "    mov eax, DWORD PTR [rax]\n")?;
-                } else if size == 8 {
-                    write!(f, "    mov rax, QWORD PTR [rax]\n")?;
-                } else {
-                    unreachable!();
+                match get_size(node) {
+                    1 => write!(f, "    mov al, BYTE PTR [rax]\n")?,
+                    2 => write!(f, "    mov ax, WORD PTR [rax]\n")?,
+                    4 => write!(f, "    mov eax, DWORD PTR [rax]\n")?,
+                    8 => write!(f, "    mov rax, QWORD PTR [rax]\n")?,
+                    _ => unreachable!(),
                 }
                 write!(f, "    push rax\n")?;
             },
@@ -270,19 +254,14 @@ impl AsmGenerator {
 
                 let mut iter = args.into_iter().enumerate();
                 while let Some((cnt, node)) = iter.next() {
-                    let size = get_size(&node);
                     self.gen_asm_lval(f, node)?;
                     write!(f, "    pop rax\n")?;
-                    if size == 1 {
-                        write!(f, "    mov BYTE PTR [rax], {}\n", ARG_REGS_8[cnt])?;
-                    } else if size == 2 {
-                        write!(f, "    mov WORD PTR [rax], {}\n", ARG_REGS_16[cnt])?;
-                    } else if size == 4 {
-                        write!(f, "    mov DWORD PTR [rax], {}\n", ARG_REGS_32[cnt])?;
-                    } else if size == 8 {
-                        write!(f, "    mov QWORD PTR [rax], {}\n", ARG_REGS_64[cnt])?;
-                    } else {
-                        unreachable!();
+                    match get_size(node) {
+                        1 => write!(f, "    mov BYTE PTR [rax], {}\n", ARG_REGS_8[cnt])?,
+                        2 => write!(f, "    mov WORD PTR [rax], {}\n", ARG_REGS_16[cnt])?,
+                        4 => write!(f, "    mov DWORD PTR [rax], {}\n", ARG_REGS_32[cnt])?,
+                        8 => write!(f, "    mov QWORD PTR [rax], {}\n", ARG_REGS_64[cnt])?,
+                        _ => unreachable!(),
                     }
                 }
 
@@ -351,7 +330,7 @@ impl AsmGenerator {
         Ok(())
     }
 
-    pub fn gen_asm(&mut self, f: &mut File, nodes: Vec<Box<Node>>) -> Result<(), AsmError> {
+    pub fn gen_asm(&mut self, f: &mut File, nodes: &Vec<Box<Node>>) -> Result<(), AsmError> {
         write!(f, ".intel_syntax noprefix\n")?;
 
         for node in nodes.into_iter() {
