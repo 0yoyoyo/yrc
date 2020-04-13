@@ -43,6 +43,32 @@ fn type_len(ty: &Type) -> usize {
     }
 }
 
+fn get_base_type(node: &Box<Node>) -> &Type {
+        match &**node {
+            Node::LocalVariable { offset: _, ty } => {
+                if let Type::Ptr(base_ty) = ty {
+                    base_ty
+                } else {
+                    unreachable!();
+                }
+            },
+            Node::GlobalVariable { name: _, offset: _, ty } => {
+                if let Type::Ptr(base_ty) = ty {
+                    base_ty
+                } else {
+                    unreachable!();
+                }
+            },
+            Node::UnaryOperator { kind, node } => {
+                match kind {
+                    UnaryOpDrf => get_base_type(&node),
+                    _ => unreachable!(),
+                }
+            },
+            _ => unreachable!(),
+        }
+}
+
 fn get_size(node: &Box<Node>) -> usize {
         match &**node {
             Node::LocalVariable { offset: _, ty } => {
@@ -54,7 +80,8 @@ fn get_size(node: &Box<Node>) -> usize {
             Node::UnaryOperator { kind, node } => {
                 match kind {
                     UnaryOpDrf => {
-                        get_size(&node)
+                        let ty = get_base_type(&node);
+                        type_len(&ty)
                     }
                     _ => unreachable!(),
                 }
