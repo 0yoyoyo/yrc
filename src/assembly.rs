@@ -20,13 +20,15 @@ const ARG_REGS_8:  [&str; 6] = ["dil", "sil",  "dl",  "cl", "r8d", "r9d"];
 pub enum AsmError {
     Io(io::Error),
     Context,
+    DrfErr,
 }
 
 impl fmt::Display for AsmError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Io(e) => write!(f, "IO error! ({})", e),
-            Context => write!(f, "Lvalue is invalid!"),
+            Context => write!(f, "Lvalue is not assignable!"),
+            DrfErr => write!(f, "Dereference target in not pointer type!"),
         }
     }
 }
@@ -48,51 +50,29 @@ fn type_len(ty: &Type) -> usize {
     }
 }
 
-fn get_base_type(node: &Box<Node>) -> &Type {
+fn lval_type(node: &Box<Node>) -> Result<&Type, AsmError> {
     match &**node {
-        Node::LocalVariable { offset: _, ty } => {
-            if let Type::Ptr(base_ty) = ty {
-                base_ty
-            } else {
-                unreachable!();
-            }
-        },
-        Node::GlobalVariable { name: _, offset: _, ty } => {
-            if let Type::Ptr(base_ty) = ty {
-                base_ty
-            } else {
-                unreachable!();
-            }
-        },
-        Node::UnaryOperator { kind, rhs } => {
-            match kind {
-                UnaryOpDrf => get_base_type(&rhs),
-                _ => unreachable!(),
-            }
-        },
-        _ => unreachable!(),
-    }
-}
-
-fn get_size(node: &Box<Node>) -> usize {
-    match &**node {
-        Node::LocalVariable { offset: _, ty } => {
-            type_len(&ty)
-        },
-        Node::GlobalVariable { name: _, offset: _, ty } => {
-            type_len(&ty)
-        },
+        Node::LocalVariable { offset: _, ty } => Ok(ty),
+        Node::GlobalVariable { name: _, offset: _, ty } => Ok(ty),
         Node::UnaryOperator { kind, rhs } => {
             match kind {
                 UnaryOpDrf => {
-                    let ty = get_base_type(rhs);
-                    type_len(&ty)
+                    if let Ok(Type::Ptr(ty)) = lval_type(rhs) {
+                        Ok(ty)
+                    } else {
+                        Err(DrfErr)
+                    }
                 }
-                _ => unreachable!(),
+                _ => Err(Context),
             }
         },
-        _ => unreachable!(),
+        _ => Err(Context),
     }
+}
+
+fn lval_size(node: &Box<Node>) -> Result<usize, AsmError> {
+    let ty = lval_type(node)?;
+    Ok(type_len(ty))
 }
 
 pub struct AsmGenerator {
@@ -183,7 +163,7 @@ impl AsmGenerator {
                         write!(f, "    movzb rax, al\n")?;
                     },
                     BinaryOpAsn => {
-                        match get_size(lhs) {
+                        match lval_size(lhs)? {
                             1 => write!(f, "    mov BYTE PTR [rax], dil\n")?,
                             2 => write!(f, "    mov WORD PTR [rax], di\n")?,
                             4 => write!(f, "    mov DWORD PTR [rax], edi\n")?,
@@ -212,7 +192,7 @@ impl AsmGenerator {
             Node::LocalVariable { offset: _, ty: _ } => {
                 self.gen_asm_lval(f, node)?;
                 write!(f, "    pop rax\n")?;
-                match get_size(node) {
+                match lval_size(node)? {
                     1 => write!(f, "    mov al, BYTE PTR [rax]\n")?,
                     2 => write!(f, "    mov ax, WORD PTR [rax]\n")?,
                     4 => write!(f, "    mov eax, DWORD PTR [rax]\n")?,
@@ -224,7 +204,7 @@ impl AsmGenerator {
             Node::GlobalVariable { name: _, offset: _, ty: _ } => {
                 self.gen_asm_lval(f, node)?;
                 write!(f, "    pop rax\n")?;
-                match get_size(node) {
+                match lval_size(node)? {
                     1 => write!(f, "    mov al, BYTE PTR [rax]\n")?,
                     2 => write!(f, "    mov ax, WORD PTR [rax]\n")?,
                     4 => write!(f, "    mov eax, DWORD PTR [rax]\n")?,
@@ -256,7 +236,7 @@ impl AsmGenerator {
                 while let Some((cnt, node)) = iter.next() {
                     self.gen_asm_lval(f, node)?;
                     write!(f, "    pop rax\n")?;
-                    match get_size(node) {
+                    match lval_size(node)? {
                         1 => write!(f, "    mov BYTE PTR [rax], {}\n", ARG_REGS_8[cnt])?,
                         2 => write!(f, "    mov WORD PTR [rax], {}\n", ARG_REGS_16[cnt])?,
                         4 => write!(f, "    mov DWORD PTR [rax], {}\n", ARG_REGS_32[cnt])?,
