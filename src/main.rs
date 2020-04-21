@@ -419,14 +419,14 @@ mod tests {
     fn calc_reference() {
         check_return_num("fn main() {\
                               let a: i32;\
-                              let b: *i32;\
+                              let b: &i32;\
                               a = 2;\
                               b = &a;\
                               return *b;\
                           }", 2);
         check_return_num("fn foo() {\
                               let a: i32;\
-                              let b: *i32;\
+                              let b: &i32;\
                               b = &a;\
                               *b = 3;\
                               return a;\

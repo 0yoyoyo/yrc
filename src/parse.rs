@@ -291,7 +291,7 @@ impl Parser {
     }
 
     fn get_type(tokens: &mut Tokens) -> Result<Type, ()> {
-        if tokens.expect_op("*") {
+        if tokens.expect_op("&") {
             Self::get_type(tokens).map(|ty| {
                 Type::Ptr(Box::new(ty))
             })
