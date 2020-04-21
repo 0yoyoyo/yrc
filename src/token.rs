@@ -175,7 +175,7 @@ fn lex_word(bytes: &[u8], cur: &mut usize) -> Token {
         if (*cur >= bytes.len()) ||
            (!b"ABCDEFGHIJKLMNOPQRSTUVWXYZ\
                abcdefghijklmnopqrstuvwxyz\
-               0123456789"
+               0123456789_"
             .contains(&bytes[*cur])) {
             let name = str::from_utf8(&tmp)
                 .unwrap()
@@ -233,7 +233,8 @@ pub fn tokenize(formula: &str) -> Result<Vec<Token>, TokenError> {
                 tokens.push(token);
             },
             b'A'..=b'Z' |
-            b'a'..=b'z' => {
+            b'a'..=b'z' |
+            b'_' => {
                 let token = lex_word(bytes, &mut cur);
                 tokens.push(token);
             },
