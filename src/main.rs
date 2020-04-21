@@ -2,10 +2,11 @@ mod token;
 mod parse;
 mod assembly;
 
-use std::env;
+//use std::env;
 use std::str;
 use std::fmt;
 use std::io;
+use std::io::prelude::*;
 use std::fs;
 use std::fs::File;
 
@@ -98,6 +99,25 @@ fn compile(formula: &str) -> Result<(), CompileError> {
 }
 
 fn main() {
+    let mut file = File::open("input/tmp.rs").unwrap();
+    let mut contents = String::new();
+    file.read_to_string(&mut contents).unwrap();
+
+    match compile(&contents) {
+        Ok(_) => (),
+        Err(e) => {
+            println!("Error!");
+            match e {
+                Env(e) => println!("{}", e),
+                _ => {
+                    println!("{}", &contents.replace("\n", " "));
+                    println!("{}", e);
+                },
+            };
+        },
+    };
+
+/*
     let args: Vec<String> = env::args().collect();
 
     if args.len() == 2 {
@@ -117,6 +137,7 @@ fn main() {
     } else {
         println!("Invalid number of arguments!");
     }
+*/
 }
 
 #[cfg(test)]
