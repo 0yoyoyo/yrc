@@ -38,6 +38,7 @@ pub enum TokenKind {
     TokenOp(String),
     TokenNum(u32),
     TokenIdt(String),
+    TokenStr(String),
     TokenRsv(String),
     TokenEnd,
 }
@@ -166,6 +167,26 @@ fn lex_op(bytes: &[u8], cur: &mut usize) -> Token {
     }
 }
 
+fn lex_str(bytes: &[u8], cur: &mut usize) -> Token {
+    let mut tmp: Vec<u8> = Vec::new();
+    let pos = *cur;
+    // Skip first "
+    *cur += 1;
+    loop {
+        tmp.push(bytes[*cur]);
+        *cur += 1;
+        if (*cur >= bytes.len()) ||
+           (bytes[*cur] == b'\"') {
+            // Skip end "
+            *cur += 1;
+            let s = str::from_utf8(&tmp)
+                .unwrap()
+                .to_string();
+            return Token::new(TokenStr(s), pos);
+        }
+    }
+}
+
 fn lex_word(bytes: &[u8], cur: &mut usize) -> Token {
     let mut tmp: Vec<u8> = Vec::new();
     let pos = *cur;
@@ -230,6 +251,10 @@ pub fn tokenize(formula: &str) -> Result<Vec<Token>, TokenError> {
             b'<' | b'>' |
             b'=' | b'!' => {
                 let token = lex_op(bytes, &mut cur);
+                tokens.push(token);
+            },
+            b'\"' => {
+                let token = lex_str(bytes, &mut cur);
                 tokens.push(token);
             },
             b'A'..=b'Z' |
