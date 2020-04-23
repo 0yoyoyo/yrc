@@ -98,6 +98,17 @@ impl Tokens {
         }
     }
 
+    pub fn expect_str(&mut self) -> Option<&str> {
+        let cur_tok = &self.list[self.current];
+        match &cur_tok.kind {
+            TokenStr(s) => {
+                self.current += 1;
+                Some(s.as_str())
+            },
+            _ => None
+        }
+    }
+
     pub fn expect_rsv(&mut self, expect: &str) -> bool {
         let cur_tok = &self.list[self.current];
         match &cur_tok.kind {
@@ -215,7 +226,8 @@ fn lex_word(bytes: &[u8], cur: &mut usize) -> Token {
             } else if name == "i8" .to_string() ||
                       name == "i16".to_string() ||
                       name == "i32".to_string() ||
-                      name == "i64".to_string() {
+                      name == "i64".to_string() ||
+                      name == "str".to_string() {
                 return Token::new(TokenRsv(name), pos);
             } else {
                 return Token::new(TokenIdt(name), pos);

@@ -95,6 +95,9 @@ pub enum Node {
     Number {
         val: u32,
     },
+    StrLiteral {
+        s: String,
+    },
     LocalVariable {
         offset: usize,
         ty: Type,
@@ -160,6 +163,13 @@ fn new_node_uop(kind: UnaryOpKind, rhs: Box<Node>) -> Box<Node> {
 fn new_node_num(val: u32) -> Box<Node> {
     let node = Node::Number {
         val: val,
+    };
+    Box::new(node)
+}
+
+fn new_node_str(s: &str) -> Box<Node> {
+    let node = Node::StrLiteral {
+        s: s.to_string(),
     };
     Box::new(node)
 }
@@ -253,7 +263,9 @@ pub enum Type {
     Int16,
     Int32,
     Int64,
+    Str,
     Ptr(Box<Type>),
+    Slc(Box<Type>),
     Ary(Box<Type>, usize),
 }
 
@@ -271,10 +283,15 @@ struct Gvar {
 pub struct Parser {
     lvar_list: Vec<Lvar>,
     gvar_list: Vec<Gvar>,
+    literal_list: Vec<String>,
     block_level: usize,
 }
 
 impl Parser {
+    pub fn literals(&self) -> &Vec<String> {
+        &self.literal_list
+    }
+
     fn align_word(n: usize) -> usize {
         if n % WORDSIZE != 0 {
             n + (WORDSIZE - n % WORDSIZE)
@@ -289,7 +306,9 @@ impl Parser {
             Type::Int16 => 2,
             Type::Int32 => 4,
             Type::Int64 => 8,
+            Type::Str => unreachable!(), // Str is not first-class type.
             Type::Ptr(_ty) => WORDSIZE,
+            Type::Slc(_ty) => WORDSIZE * 2,
             Type::Ary(ty, len) => Self::type_len(&*ty) * len,
         }
     }
@@ -297,7 +316,16 @@ impl Parser {
     fn get_type(tokens: &mut Tokens) -> Result<Type, ()> {
         if tokens.expect_op("&") {
             Self::get_type(tokens).map(|ty| {
-                Type::Ptr(Box::new(ty))
+                match ty {
+                    Type::Int8 | Type::Int16 |
+                    Type::Int32 | Type::Int64 |
+                    Type::Ptr(_) | Type::Slc(_) => {
+                        Type::Ptr(Box::new(ty))
+                    },
+                    Type::Str | Type::Ary(_, _) => {
+                        Type::Slc(Box::new(ty))
+                    },
+                }
             })
         } else if tokens.expect_op("[") {
             Self::get_type(tokens).and_then(|ty| {
@@ -322,6 +350,8 @@ impl Parser {
                 Ok(Type::Int32)
             } else if tokens.expect_rsv("i64") {
                 Ok(Type::Int64)
+            } else if tokens.expect_rsv("str") {
+                Ok(Type::Str)
             } else {
                 Err(())
             }
@@ -336,7 +366,9 @@ impl Parser {
                 Type::Int16 => total += 2,
                 Type::Int32 => total += 4,
                 Type::Int64 => total += 8,
+                Type::Str => unreachable!(), // Str is not first-class type.
                 Type::Ptr(_ty) => total += WORDSIZE,
+                Type::Slc(_ty) => total += WORDSIZE * 2,
                 Type::Ary(ty, len) => total += Self::type_len(&**ty) * len,
             }
         }
@@ -478,6 +510,10 @@ impl Parser {
             } else {
                 self.var(name, tokens)
             }
+        } else if let Some(s) = tokens.expect_str() {
+            let new = s.to_string();
+            self.literal_list.push(new);
+            Ok(new_node_str(s))
         } else {
             let num = tokens.expect_num()
                 .ok_or(ParseError::new(NumberExpected, tokens))?;
@@ -717,6 +753,7 @@ impl Parser {
         Parser {
             lvar_list: Vec::new(),
             gvar_list: Vec::new(),
+            literal_list: Vec::new(),
             block_level: 0,
         }
     }
