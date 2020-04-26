@@ -110,7 +110,7 @@ impl AsmGenerator {
                 Ok(())
             },
             Node::GlobalVariable { name, offset, ty: _ } => {
-                write!(f, "    lea rax, {}[rip+{}]\n", name, offset)?;
+                write!(f, "    lea rax, QWORD PTR {}[rip+{}]\n", name, offset)?;
                 write!(f, "    push rax\n")?;
                 Ok(())
             },
@@ -185,7 +185,7 @@ impl AsmGenerator {
                             match &**rhs {
                                 Node::StrLiteral { s } => {
                                     // TODO: Implement multiple literal labels!
-                                    write!(f, "    lea rdi, .LC0[rip]\n")?;
+                                    write!(f, "    lea rdi, QWORD PTR .LC0[rip]\n")?;
                                     write!(f, "    mov QWORD PTR [rax], rdi\n")?;
                                     write!(f, "    mov QWORD PTR [rax+8], {}\n", s.len())?;
                                 }
@@ -214,7 +214,7 @@ impl AsmGenerator {
                     UnaryOpDrf => {
                         self.gen_asm_node(f, rhs)?;
                         write!(f, "    pop rax\n")?;
-                        write!(f, "    mov rax, [rax]\n")?;
+                        write!(f, "    mov rax, QWORD PTR [rax]\n")?;
                         write!(f, "    push rax\n")?;
                     }
                 }
