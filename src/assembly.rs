@@ -110,7 +110,7 @@ impl AsmGenerator {
                 Ok(())
             },
             Node::GlobalVariable { name, offset, ty: _ } => {
-                write!(f, "    mov rax, OFFSET FLAT:{}+{}\n", name, offset)?;
+                write!(f, "    lea rax, {}[rip+{}]\n", name, offset)?;
                 write!(f, "    push rax\n")?;
                 Ok(())
             },

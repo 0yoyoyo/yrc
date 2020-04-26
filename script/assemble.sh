@@ -8,7 +8,7 @@ fi
 
 cd output
 
-OPTION="-no-pie"
+OPTION=""
 gcc $NAME.s -o $NAME $OPTION
 ./$NAME
 RESULT="$?"
