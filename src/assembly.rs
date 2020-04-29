@@ -39,6 +39,13 @@ impl From<io::Error> for AsmError {
     }
 }
 
+fn is_call(node: &Box<Node>) -> bool {
+    match &**node {
+        Node::Call { name: _, args: _ } => true,
+        _ => false,
+    }
+}
+
 fn is_slice(node: &Box<Node>) -> bool {
     if let Ok(ty) = lval_type(node) {
         match ty {
@@ -96,9 +103,39 @@ impl AsmGenerator {
     fn gen_asm_block(&mut self, f: &mut File, nodes: &Vec<Box<Node>>) -> Result<(), AsmError> {
         let mut iter = nodes.into_iter();
         while let Some(node) = iter.next() {
-            self.gen_asm_node(f, node)?;
+            if is_call(node) {
+                // Do not handle return value when a function is called alone.
+                self.gen_asm_call(f, node)?;
+            } else {
+                self.gen_asm_node(f, node)?;
+            }
         }
         Ok(())
+    }
+
+    fn gen_asm_call(&mut self, f: &mut File, node: &Box<Node>) -> Result<(), AsmError> {
+        match &**node {
+            Node::Call { name, args } => {
+                let mut iter = args.into_iter().enumerate();
+                while let Some((cnt, node)) = iter.next() {
+                    if is_slice(node) {
+                        self.gen_asm_lval(f, node)?;
+                        write!(f, "    pop rax\n")?;
+                        write!(f, "    mov {}, QWORD PTR [rax]\n", ARG_REGS_64[0])?;
+                        //write!(f, "    mov {}, DWORD PTR [rax+8]\n", ARG_REGS_32[1])?;
+                        write!(f, "    mov {}, QWORD PTR [rax+8]\n", ARG_REGS_64[1])?;
+                    } else {
+                        self.gen_asm_node(f, node)?;
+                        write!(f, "    pop rax\n")?;
+                        write!(f, "    mov {}, rax\n", ARG_REGS_64[cnt])?;
+                    }
+                }
+
+                write!(f, "    call {}\n", name)?;
+                Ok(())
+            },
+            _ => unreachable!(),
+        }
     }
 
     fn gen_asm_lval(&mut self, f: &mut File, node: &Box<Node>) -> Result<(), AsmError> {
@@ -280,23 +317,8 @@ impl AsmGenerator {
 
                 write!(f, "\n")?;
             },
-            Node::Call { name, args } => {
-                let mut iter = args.into_iter().enumerate();
-                while let Some((cnt, node)) = iter.next() {
-                    if is_slice(node) {
-                        self.gen_asm_lval(f, node)?;
-                        write!(f, "    pop rax\n")?;
-                        write!(f, "    mov {}, QWORD PTR [rax]\n", ARG_REGS_64[0])?;
-                        //write!(f, "    mov {}, DWORD PTR [rax+8]\n", ARG_REGS_32[1])?;
-                        write!(f, "    mov {}, QWORD PTR [rax+8]\n", ARG_REGS_64[1])?;
-                    } else {
-                        self.gen_asm_node(f, node)?;
-                        write!(f, "    pop rax\n")?;
-                        write!(f, "    mov {}, rax\n", ARG_REGS_64[cnt])?;
-                    }
-                }
-
-                write!(f, "    call {}\n", name)?;
+            Node::Call { name: _, args: _ } => {
+                self.gen_asm_call(f, node)?;
                 write!(f, "    push rax\n")?;
             },
             Node::If { cond, ibody } => {
@@ -360,7 +382,12 @@ impl AsmGenerator {
         }
 
         for node in nodes.into_iter() {
-            self.gen_asm_node(f, node)?;
+            if is_call(node) {
+                // Do not handle return value when a function is called alone.
+                self.gen_asm_call(f, node)?;
+            } else {
+                self.gen_asm_node(f, node)?;
+            }
         }
 
         Ok(())
