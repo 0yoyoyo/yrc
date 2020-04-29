@@ -240,7 +240,9 @@ impl AsmGenerator {
                         //write!(f, "    push rdi\n")?;
                     },
                 }
-                write!(f, "    push rax\n")?;
+                if *kind != BinaryOpAsn {
+                    write!(f, "    push rax\n")?;
+                }
             },
             Node::UnaryOperator { kind, rhs } => {
                 match kind {
