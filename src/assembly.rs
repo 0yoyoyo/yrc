@@ -268,6 +268,9 @@ impl AsmGenerator {
                 }
                 write!(f, "    push rax\n")?;
             },
+            Node::DeclareLocal { offset: _, ty: _ } => {
+                // Do nothing
+            },
             Node::GlobalVariable { name: _, offset: _, ty: _ } => {
                 self.gen_asm_lval(f, node)?;
                 write!(f, "    pop rax\n")?;

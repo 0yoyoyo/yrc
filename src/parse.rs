@@ -103,6 +103,10 @@ pub enum Node {
         offset: usize,
         ty: Type,
     },
+    DeclareLocal {
+        offset: usize,
+        ty: Type,
+    },
     GlobalVariable {
         name: String,
         offset: usize,
@@ -178,6 +182,14 @@ fn new_node_str(s: &str, label: usize) -> Box<Node> {
 
 fn new_node_lvar(offset: usize, ty: Type) -> Box<Node> {
     let node = Node::LocalVariable {
+        offset: offset,
+        ty: ty,
+    };
+    Box::new(node)
+}
+
+fn new_node_decl(offset: usize, ty: Type) -> Box<Node> {
+    let node = Node::DeclareLocal {
         offset: offset,
         ty: ty,
     };
@@ -397,7 +409,7 @@ impl Parser {
                 };
                 self.lvar_list.push(new);
 
-                Ok(new_node_lvar(offset, ty))
+                Ok(new_node_decl(offset, ty))
             }
         } else {
             Err(ParseError::new(TypeExpected, tokens))
@@ -640,7 +652,8 @@ impl Parser {
                     let name = &name.to_string();
 
                     if tokens.expect_op(":") {
-                        let node = self.typ(name, tokens, false)?;
+                        let _dec = self.typ(name, tokens, false)?;
+                        let node = self.var(name, tokens)?;
                         args.push(node);
                     } else {
                         return Err(ParseError::new(TypeExpected, tokens));
