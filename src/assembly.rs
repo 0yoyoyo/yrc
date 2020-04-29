@@ -132,7 +132,7 @@ impl AsmGenerator {
             Node::Number { val } => {
                 write!(f, "    push {}\n", val)?;
             },
-            Node::StrLiteral { s: _ } => {
+            Node::StrLiteral { s: _, label: _ } => {
                 // Do nothing
             },
             Node::BinaryOperator { kind, lhs, rhs } => {
@@ -183,9 +183,9 @@ impl AsmGenerator {
                     BinaryOpAsn => {
                         if is_slice(lhs) {
                             match &**rhs {
-                                Node::StrLiteral { s } => {
+                                Node::StrLiteral { s, label } => {
                                     // TODO: Implement multiple literal labels!
-                                    write!(f, "    lea rdi, QWORD PTR .LC0[rip]\n")?;
+                                    write!(f, "    lea rdi, QWORD PTR .LC{}[rip]\n", label)?;
                                     write!(f, "    mov QWORD PTR [rax], rdi\n")?;
                                     write!(f, "    mov QWORD PTR [rax+8], {}\n", s.len())?;
                                 }
@@ -287,7 +287,8 @@ impl AsmGenerator {
                         self.gen_asm_lval(f, node)?;
                         write!(f, "    pop rax\n")?;
                         write!(f, "    mov {}, QWORD PTR [rax]\n", ARG_REGS_64[0])?;
-                        write!(f, "    mov {}, DWORD PTR [rax+8]\n", ARG_REGS_32[1])?;
+                        //write!(f, "    mov {}, DWORD PTR [rax+8]\n", ARG_REGS_32[1])?;
+                        write!(f, "    mov {}, QWORD PTR [rax+8]\n", ARG_REGS_64[1])?;
                     } else {
                         self.gen_asm_node(f, node)?;
                         write!(f, "    pop rax\n")?;

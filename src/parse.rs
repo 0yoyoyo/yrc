@@ -97,6 +97,7 @@ pub enum Node {
     },
     StrLiteral {
         s: String,
+        label: usize,
     },
     LocalVariable {
         offset: usize,
@@ -167,9 +168,10 @@ fn new_node_num(val: u32) -> Box<Node> {
     Box::new(node)
 }
 
-fn new_node_str(s: &str) -> Box<Node> {
+fn new_node_str(s: &str, label: usize) -> Box<Node> {
     let node = Node::StrLiteral {
         s: s.to_string(),
+        label: label,
     };
     Box::new(node)
 }
@@ -513,7 +515,7 @@ impl Parser {
         } else if let Some(s) = tokens.expect_str() {
             let new = s.to_string();
             self.literal_list.push(new);
-            Ok(new_node_str(s))
+            Ok(new_node_str(s, self.literal_list.len() - 1))
         } else {
             let num = tokens.expect_num()
                 .ok_or(ParseError::new(NumberExpected, tokens))?;
