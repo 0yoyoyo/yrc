@@ -306,9 +306,10 @@ impl Parser {
         &self.literal_list
     }
 
-    fn align_word(n: usize) -> usize {
-        if n % WORDSIZE != 0 {
-            n + (WORDSIZE - n % WORDSIZE)
+    fn align_double_word(n: usize) -> usize {
+        let dw = WORDSIZE * 2;
+        if n % dw != 0 {
+            n + (dw - n % dw)
         } else {
             n
         }
@@ -671,7 +672,7 @@ impl Parser {
             }
             let block = self.blk(tokens)?;
 
-            let stack = Self::align_word(self.get_stack_size());
+            let stack = Self::align_double_word(self.get_stack_size());
             self.lvar_list.clear();
 
             Ok(new_node_func(name, args, stack, block))
