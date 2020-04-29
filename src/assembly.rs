@@ -122,7 +122,6 @@ impl AsmGenerator {
                         self.gen_asm_lval(f, node)?;
                         write!(f, "    pop rax\n")?;
                         write!(f, "    mov {}, QWORD PTR [rax]\n", ARG_REGS_64[0])?;
-                        //write!(f, "    mov {}, DWORD PTR [rax+8]\n", ARG_REGS_32[1])?;
                         write!(f, "    mov {}, QWORD PTR [rax+8]\n", ARG_REGS_64[1])?;
                     } else {
                         self.gen_asm_node(f, node)?;
