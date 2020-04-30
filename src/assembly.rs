@@ -381,7 +381,7 @@ impl AsmGenerator {
         let mut iter = literals.into_iter().enumerate();
         while let Some((cnt, lit)) = iter.next() {
             write!(f, ".LC{}:\n", cnt)?;
-            write!(f, "    .string \"{}\"\n", lit)?;
+            write!(f, "    .ascii \"{}\"\n", lit)?;
         }
 
         for node in nodes.into_iter() {
