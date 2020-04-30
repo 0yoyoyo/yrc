@@ -220,7 +220,6 @@ impl AsmGenerator {
                         if is_slice(lhs) {
                             match &**rhs {
                                 Node::StrLiteral { s, label } => {
-                                    // TODO: Implement multiple literal labels!
                                     write!(f, "    lea rdi, QWORD PTR .LC{}[rip]\n", label)?;
                                     write!(f, "    mov QWORD PTR [rax], rdi\n")?;
                                     write!(f, "    mov QWORD PTR [rax+8], {}\n", s.len())?;
