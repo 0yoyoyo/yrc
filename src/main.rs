@@ -276,6 +276,21 @@ mod tests {
                               a = 1;\
                               return a;\
                           }", 1);
+        // To check upper bits are cleared.
+        check_return_num("static a: i8;\
+                          fn main() {\
+                              let b: i8;\
+                              a = 1;\
+                              b = 1;\
+                              return a == b;\
+                          }", 1);
+        check_return_num("static a: i16;\
+                          fn main() {\
+                              let b: i16;\
+                              a = 1;\
+                              b = 1;\
+                              return a == b;\
+                          }", 1);
     }
 
     #[test]

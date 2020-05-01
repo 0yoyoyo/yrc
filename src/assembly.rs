@@ -260,8 +260,8 @@ impl AsmGenerator {
                 self.gen_asm_lval(f, node)?;
                 write!(f, "    pop rax\n")?;
                 match lval_size(node)? {
-                    1 => write!(f, "    mov al, BYTE PTR [rax]\n")?,
-                    2 => write!(f, "    mov ax, WORD PTR [rax]\n")?,
+                    1 => write!(f, "    movsx eax, BYTE PTR [rax]\n")?,
+                    2 => write!(f, "    movsx eax, WORD PTR [rax]\n")?,
                     4 => write!(f, "    mov eax, DWORD PTR [rax]\n")?,
                     8 => write!(f, "    mov rax, QWORD PTR [rax]\n")?,
                     // Is size check needed here?
@@ -276,8 +276,8 @@ impl AsmGenerator {
                 self.gen_asm_lval(f, node)?;
                 write!(f, "    pop rax\n")?;
                 match lval_size(node)? {
-                    1 => write!(f, "    mov al, BYTE PTR [rax]\n")?,
-                    2 => write!(f, "    mov ax, WORD PTR [rax]\n")?,
+                    1 => write!(f, "    movsx eax, BYTE PTR [rax]\n")?,
+                    2 => write!(f, "    movsx eax, WORD PTR [rax]\n")?,
                     4 => write!(f, "    mov eax, DWORD PTR [rax]\n")?,
                     8 => write!(f, "    mov rax, QWORD PTR [rax]\n")?,
                     _ => unreachable!(),
