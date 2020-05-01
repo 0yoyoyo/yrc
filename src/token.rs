@@ -248,7 +248,7 @@ pub fn tokenize(formula: &str) -> Result<Vec<Token>, TokenError> {
                 tokens.push(token);
             },
             b'+' | b'-' |
-            b'*' | b'/' |
+            b'*' |
             b'(' | b')' |
             b'[' | b']' |
             b'{' | b'}' |
@@ -274,6 +274,37 @@ pub fn tokenize(formula: &str) -> Result<Vec<Token>, TokenError> {
             b'_' => {
                 let token = lex_word(bytes, &mut cur);
                 tokens.push(token);
+            },
+            b'/' => {
+                if (cur + 1 <= bytes.len()) &&
+                   (b"/".contains(&bytes[cur + 1])) {
+                    cur += 1;
+                    while (cur + 1 <= bytes.len()) &&
+                          (!b"\n".contains(&bytes[cur + 1])) {
+                        cur += 1;
+                    }
+                    cur += 1;
+                } else if (cur + 1 <= bytes.len()) &&
+                          (b"*".contains(&bytes[cur + 1])) {
+                    cur += 1;
+                    loop {
+                        if ((cur + 1 >= bytes.len()) ||
+                           (b"*".contains(&bytes[cur + 1]))) &&
+                           ((cur + 2 >= bytes.len()) ||
+                           (b"/".contains(&bytes[cur + 2]))) {
+                            cur += 2;
+                            break;
+                        }
+                        cur += 1;
+                    }
+                    cur += 1;
+                } else {
+                    let op = str::from_utf8(&bytes[cur].to_ne_bytes())
+                        .unwrap()
+                        .to_string();
+                    tokens.push(Token::new(TokenOp(op), cur));
+                    cur += 1;
+                }
             },
             b' ' | b'\t'| b'\n' => cur += 1,
             _ => return Err(TokenError::new(CannotTokenize, cur)),

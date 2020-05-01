@@ -472,6 +472,29 @@ mod tests {
     }
 
     #[test]
+    fn check_comment() {
+        check_return_num("fn main() {\
+                              // This is\n\
+                              // one line\n\
+                              // comment.\n\
+                              return 1;\
+                          }", 1);
+        check_return_num("fn main() {\
+                              /*\
+                               * This is\
+                               * multiple line\
+                               * comment.\
+                               */\
+                              return 1;\
+                          }", 1);
+        check_return_num("fn main() {\
+                              /* No content */\
+                              /**/\
+                              return 1;\
+                          }", 1);
+    }
+
+    #[test]
     fn check_format() {
         check_return_num("fn main() { return 1+2+3; }", 6);
         check_return_num("fn main() { return  1 + 2 + 3 ; }", 6);
