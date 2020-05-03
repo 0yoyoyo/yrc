@@ -18,6 +18,7 @@ pub enum ParseErrorKind {
     BlockExpected,
     TypeInvalid,
     UnknownVariable,
+    NotInTop,
 }
 
 #[derive(Debug)]
@@ -56,6 +57,7 @@ impl fmt::Display for ParseError {
             BlockExpected => write!(f, "Block is expected here!"),
             TypeInvalid => write!(f, "Invalid Type!"),
             UnknownVariable => write!(f, "Unknown variable!"),
+            NotInTop => write!(f, "Cannot use in top level"),
         }
     }
 }
@@ -723,10 +725,7 @@ impl Parser {
 
     fn stmt(&mut self, tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
         let node: Box<Node>;
-        if tokens.expect_rsv("fn") {
-            node = self.func(tokens)?;
-            return Ok(node);
-        } else if tokens.expect_rsv("if") {
+        if tokens.expect_rsv("if") {
             node = self.ifel(tokens)?;
             return Ok(node);
         } else if tokens.expect_rsv("while") {
@@ -734,8 +733,6 @@ impl Parser {
             return Ok(node);
         } else if tokens.expect_rsv("let") {
             node = self.bind(tokens, false)?;
-        } else if tokens.expect_rsv("static") {
-            node = self.bind(tokens, true)?;
         } else if tokens.expect_rsv("return") {
             let rhs = self.expr(tokens)?;
             node = new_node_ret(rhs);
@@ -750,10 +747,25 @@ impl Parser {
         }
     }
 
+    fn top(&mut self, tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
+        if tokens.expect_rsv("fn") {
+            self.func(tokens)
+        } else if tokens.expect_rsv("static") {
+            let node = self.bind(tokens, true)?;
+            if tokens.expect_op(";") {
+                Ok(node)
+            } else {
+                Err(ParseError::new(ScolonExpected, tokens))
+            }
+        } else {
+            Err(ParseError::new(NotInTop, tokens))
+        }
+    }
+
     pub fn program(&mut self, tokens: &mut Tokens) -> Result<Vec<Box<Node>>, ParseError> {
         let mut nodes: Vec<Box<Node>> = Vec::new();
         while tokens.has_next() {
-            match self.stmt(tokens) {
+            match self.top(tokens) {
                 Ok(node) => nodes.push(node),
                 Err(e) => return Err(e),
             }
