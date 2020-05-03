@@ -331,7 +331,7 @@ pub struct Parser {
 //
 // <stmt> ::= <expr> ";" | <locl> ";" | <ret> ";" | <ifel> | <whl>
 // <blk>  ::= "{" <stmt>* "}"
-// <func> ::= "fn" <idt> "(" <args> ")" <blk>
+// <func> ::= "fn" <idt> "(" <fn_args> ")" <blk>
 // <bind> ::= <idt> ":" <typ>
 // <glbl> ::= "static" <bind>
 // <top>  ::= <func> | <glbl> ";"
