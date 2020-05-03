@@ -303,6 +303,39 @@ pub struct Parser {
     block_level: usize,
 }
 
+// Production rules
+//
+// <idt>  ::= IDENTIFIER
+// <slit> ::= STRING LITERAL
+// <num>  ::= NUMBER
+//
+// <typ>  ::= TYPE ("i32", "&str", "[i8; 4]", etc.)
+//
+// <fn_args> ::= (<bind> ("," <bind>)*)?
+// <cl_args> ::= (<expr> ("," <expr>)*)?
+//
+// <sym>  ::= <idt> ("(" <cl_args> ")")?
+// <prim> ::= <num> | <slit> | <sym> | "(" <expr> ")"
+// <una>  ::= "-"? <prim> | "&" <una> | "*" <una>
+// <mul>  ::= <una> ("*" <una> | "/" <una>)*
+// <add>  ::= <mul> ("+" <mul> | "-" <mul>)*
+// <rel>  ::= <add> ("<" <add> | "<=" <add> | ">" <add> | ">=" <add>)*
+// <eql>  ::= <rel> ("==" <rel> | "!=" <rel>)*
+// <asn>  ::= <eql> ("=" <asn>)?
+//
+// <expr> ::= <asn>
+// <whl>  ::= "while" <expr> <blk>
+// <ifel> ::= "if" <expr> <blk> ("else" <blk>)?
+// <ret>  ::= "return" <expr>
+// <locl> ::= "let" <bind>
+//
+// <stmt> ::= <expr> ";" | <locl> ";" | <ret> ";" | <ifel> | <whl>
+// <blk>  ::= "{" <stmt>* "}"
+// <func> ::= "fn" <idt> "(" <args> ")" <blk>
+// <bind> ::= <idt> ":" <typ>
+// <glbl> ::= "static" <bind>
+// <top>  ::= <func> | <glbl> ";"
+// <pgrm> ::= <top>*
 impl Parser {
     pub fn literals(&self) -> &Vec<String> {
         &self.literal_list
