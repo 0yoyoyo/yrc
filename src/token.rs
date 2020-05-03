@@ -236,6 +236,36 @@ fn lex_word(bytes: &[u8], cur: &mut usize) -> Token {
     }
 }
 
+fn skip_line_comment(bytes: &[u8], cur: &mut usize) {
+    // Skip // of line top
+    *cur += 2;
+    loop {
+        if (*cur >= bytes.len()) ||
+           (b"\n".contains(&bytes[*cur])) {
+            // Skip \n of line end
+            *cur += 1;
+            break;
+        }
+        *cur += 1;
+    }
+}
+
+fn skip_block_comment(bytes: &[u8], cur: &mut usize) {
+    // Skip /* of beginning
+    *cur += 2;
+    loop {
+        if ((*cur >= bytes.len()) ||
+           (b"*".contains(&bytes[*cur]))) &&
+           ((*cur + 1 >= bytes.len()) ||
+           (b"/".contains(&bytes[*cur + 1]))) {
+            // Skip */ of end
+            *cur += 2;
+            break;
+        }
+        *cur += 1;
+    }
+}
+
 pub fn tokenize(formula: &str) -> Result<Vec<Token>, TokenError> {
     let mut tokens: Vec<Token> = Vec::new();
     let mut cur = 0;
@@ -278,26 +308,10 @@ pub fn tokenize(formula: &str) -> Result<Vec<Token>, TokenError> {
             b'/' => {
                 if (cur + 1 <= bytes.len()) &&
                    (b"/".contains(&bytes[cur + 1])) {
-                    cur += 1;
-                    while (cur + 1 <= bytes.len()) &&
-                          (!b"\n".contains(&bytes[cur + 1])) {
-                        cur += 1;
-                    }
-                    cur += 1;
+                    skip_line_comment(bytes, &mut cur);
                 } else if (cur + 1 <= bytes.len()) &&
                           (b"*".contains(&bytes[cur + 1])) {
-                    cur += 1;
-                    loop {
-                        if ((cur + 1 >= bytes.len()) ||
-                           (b"*".contains(&bytes[cur + 1]))) &&
-                           ((cur + 2 >= bytes.len()) ||
-                           (b"/".contains(&bytes[cur + 2]))) {
-                            cur += 2;
-                            break;
-                        }
-                        cur += 1;
-                    }
-                    cur += 1;
+                    skip_block_comment(bytes, &mut cur);
                 } else {
                     let op = str::from_utf8(&bytes[cur].to_ne_bytes())
                         .unwrap()
