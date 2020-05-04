@@ -15,6 +15,7 @@ pub enum ParseErrorKind {
     ArgExpected,
     ParenExpected,
     ScolonExpected,
+    ColonExpected,
     BlockExpected,
     TypeInvalid,
     UnknownVariable,
@@ -54,6 +55,7 @@ impl fmt::Display for ParseError {
             ArgExpected => write!(f, "Arguments are needed!"),
             ParenExpected => write!(f, "Parentheses are not closed!"),
             ScolonExpected => write!(f, "Semicolon is needed!"),
+            ColonExpected => write!(f, "Colon is needed!"),
             BlockExpected => write!(f, "Block is expected here!"),
             TypeInvalid => write!(f, "Invalid Type!"),
             UnknownVariable => write!(f, "Unknown variable!"),
@@ -296,6 +298,11 @@ struct Gvar {
     ty: Type,
 }
 
+struct VarInfo {
+    name: String,
+    ty: Type,
+}
+
 pub struct Parser {
     lvar_list: Vec<Lvar>,
     gvar_list: Vec<Gvar>,
@@ -425,30 +432,19 @@ impl Parser {
         total
     }
 
-    fn typ(&mut self, name: &str, tokens: &mut Tokens, is_global: bool) -> Result<Box<Node>, ParseError> {
-        if let Ok(ty) = Self::get_type(tokens) {
-            if is_global {
-                let size = Self::type_len(&ty);
-                let new = Gvar {
-                    name: name.to_string(),
-                    ty: ty.clone(),
-                };
-                self.gvar_list.push(new);
-
-                Ok(new_node_decg(name, size, ty))
-            } else {
-                let offset = self.get_stack_size() + Self::type_len(&ty);
-                let new = Lvar {
-                    name: name.to_string(),
-                    ty: ty.clone(),
-                    offset: offset,
-                };
-                self.lvar_list.push(new);
-
-                Ok(new_node_decl(offset, ty))
-            }
+    fn consume_semicolon(&self, tokens: &mut Tokens) -> Result<(), ParseError> {
+        if tokens.expect_op(";") {
+            Ok(())
         } else {
-            Err(ParseError::new(TypeExpected, tokens))
+            Err(ParseError::new(ScolonExpected, tokens))
+        }
+    }
+
+    fn consume_colon(&self, tokens: &mut Tokens) -> Result<(), ParseError> {
+        if tokens.expect_op(":") {
+            Ok(())
+        } else {
+            Err(ParseError::new(ColonExpected, tokens))
         }
     }
 
@@ -506,32 +502,19 @@ impl Parser {
         Err(ParseError::new_with_offset(UnknownVariable, tokens, 1))
     }
 
-    fn bind(&mut self, tokens: &mut Tokens, is_global: bool) -> Result<Box<Node>, ParseError> {
+    fn bind(&mut self, tokens: &mut Tokens) -> Result<VarInfo, ParseError> {
         if let Some(name) = tokens.expect_idt() {
             // Get ownership
-            let name = &name.to_string();
+            let name = name.to_string();
 
-            if tokens.expect_op(":") {
-                self.typ(name, tokens, is_global)
-            } else {
-                Err(ParseError::new(TypeExpected, tokens))
-            }
+            self.consume_colon(tokens)?;
+            let ty = Self::get_type(tokens)
+                .map_err(|_| ParseError::new(TypeExpected, tokens))?;
+
+            Ok(VarInfo { name: name, ty: ty })
         } else {
             Err(ParseError::new(VariableExpected, tokens))
         }
-    }
-
-    fn blk(&mut self, tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
-        self.block_level += 1;
-        let mut nodes: Vec<Box<Node>> = Vec::new();
-        while !tokens.expect_op("}") {
-            match self.stmt(tokens) {
-                Ok(node) => nodes.push(node),
-                Err(e) => return Err(e),
-            }
-        }
-        self.block_level -= 1;
-        Ok(new_node_blk(nodes))
     }
 
     fn primary(&mut self, tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
@@ -672,6 +655,19 @@ impl Parser {
         self.assign(tokens)
     }
 
+    fn blk(&mut self, tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
+        self.block_level += 1;
+        let mut nodes: Vec<Box<Node>> = Vec::new();
+        while !tokens.expect_op("}") {
+            match self.stmt(tokens) {
+                Ok(node) => nodes.push(node),
+                Err(e) => return Err(e),
+            }
+        }
+        self.block_level -= 1;
+        Ok(new_node_blk(nodes))
+    }
+
     fn func(&mut self, tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
         if let Some(name) = tokens.expect_idt() {
             // Get ownership
@@ -683,20 +679,18 @@ impl Parser {
 
             let mut args: Vec<Box<Node>> = Vec::new();
             while !tokens.expect_op(")") {
-                if let Some(name) = tokens.expect_idt() {
-                    // Get ownership
-                    let name = &name.to_string();
+                let vi = self.bind(tokens)?;
 
-                    if tokens.expect_op(":") {
-                        let _dec = self.typ(name, tokens, false)?;
-                        let node = self.var(name, tokens)?;
-                        args.push(node);
-                    } else {
-                        return Err(ParseError::new(TypeExpected, tokens));
-                    }
-                } else {
-                    return Err(ParseError::new(ParenExpected, tokens));
-                }
+                let offset = self.get_stack_size() + Self::type_len(&vi.ty);
+                let new = Lvar {
+                    name: vi.name.clone(),
+                    ty: vi.ty,
+                    offset: offset,
+                };
+                self.lvar_list.push(new);
+
+                let node = self.var(&vi.name, tokens)?;
+                args.push(node);
                 if tokens.expect_op(",") {
                     continue;
                 }
@@ -756,40 +750,62 @@ impl Parser {
         Ok(new_node_whl(cond, body))
     }
 
+    fn locl(&mut self, tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
+        let vi = self.bind(tokens)?;
+
+        let offset = self.get_stack_size() + Self::type_len(&vi.ty);
+        let new = Lvar {
+            name: vi.name,
+            ty: vi.ty.clone(),
+            offset: offset,
+        };
+        self.lvar_list.push(new);
+
+        Ok(new_node_decl(offset, vi.ty))
+    }
+
     fn stmt(&mut self, tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
         let node: Box<Node>;
+
         if tokens.expect_rsv("if") {
             node = self.ifel(tokens)?;
-            return Ok(node);
         } else if tokens.expect_rsv("while") {
             node = self.whl(tokens)?;
-            return Ok(node);
         } else if tokens.expect_rsv("let") {
-            node = self.bind(tokens, false)?;
+            node = self.locl(tokens)?;
+            self.consume_semicolon(tokens)?;
         } else if tokens.expect_rsv("return") {
             let rhs = self.expr(tokens)?;
             node = new_node_ret(rhs);
+            self.consume_semicolon(tokens)?;
         } else {
             node = self.expr(tokens)?;
+            self.consume_semicolon(tokens)?;
         }
 
-        if tokens.expect_op(";") {
-            Ok(node)
-        } else {
-            Err(ParseError::new(ScolonExpected, tokens))
-        }
+        Ok(node)
+    }
+
+    fn glbl(&mut self, tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
+        let vi = self.bind(tokens)?;
+
+        let size = Self::type_len(&vi.ty);
+        let new = Gvar {
+            name: vi.name.clone(),
+            ty: vi.ty.clone(),
+        };
+        self.gvar_list.push(new);
+
+        Ok(new_node_decg(&vi.name, size, vi.ty))
     }
 
     fn top(&mut self, tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
         if tokens.expect_rsv("fn") {
             self.func(tokens)
         } else if tokens.expect_rsv("static") {
-            let node = self.bind(tokens, true)?;
-            if tokens.expect_op(";") {
-                Ok(node)
-            } else {
-                Err(ParseError::new(ScolonExpected, tokens))
-            }
+            let node = self.glbl(tokens)?;
+            self.consume_semicolon(tokens)?;
+            Ok(node)
         } else {
             Err(ParseError::new(NotInTop, tokens))
         }
