@@ -370,51 +370,6 @@ impl Parser {
         }
     }
 
-    fn get_type(tokens: &mut Tokens) -> Result<Type, ()> {
-        if tokens.expect_op("&") {
-            Self::get_type(tokens).map(|ty| {
-                match ty {
-                    Type::Int8 | Type::Int16 |
-                    Type::Int32 | Type::Int64 |
-                    Type::Ptr(_) | Type::Slc(_) => {
-                        Type::Ptr(Box::new(ty))
-                    },
-                    Type::Str | Type::Ary(_, _) => {
-                        Type::Slc(Box::new(ty))
-                    },
-                }
-            })
-        } else if tokens.expect_op("[") {
-            Self::get_type(tokens).and_then(|ty| {
-                if tokens.expect_op(";") {
-                    tokens.expect_num().ok_or(()).and_then(|num| {
-                        if tokens.expect_op("]") {
-                            Ok(Type::Ary(Box::new(ty), num as usize))
-                        } else {
-                            Err(())
-                        }
-                    })
-                } else {
-                    Err(())
-                }
-            })
-        } else {
-            if tokens.expect_rsv("i8") {
-                Ok(Type::Int8)
-            } else if tokens.expect_rsv("i16") {
-                Ok(Type::Int16)
-            } else if tokens.expect_rsv("i32") {
-                Ok(Type::Int32)
-            } else if tokens.expect_rsv("i64") {
-                Ok(Type::Int64)
-            } else if tokens.expect_rsv("str") {
-                Ok(Type::Str)
-            } else {
-                Err(())
-            }
-        }
-    }
-
     pub fn get_stack_size(&mut self) -> usize {
         let mut total = 0;
         for lvar in &self.lvar_list {
@@ -503,17 +458,54 @@ impl Parser {
     }
 
     fn bind(&mut self, tokens: &mut Tokens) -> Result<VarInfo, ParseError> {
-        if let Some(name) = tokens.expect_idt() {
-            // Get ownership
-            let name = name.to_string();
+        let name = tokens.expect_idt()
+            .map(|s| s.to_string())
+            .ok_or(ParseError::new(VariableExpected, tokens))?;
 
-            self.consume_colon(tokens)?;
-            let ty = Self::get_type(tokens)
-                .map_err(|_| ParseError::new(TypeExpected, tokens))?;
+        self.consume_colon(tokens)?;
+        let ty = self.typ(tokens)?;
 
-            Ok(VarInfo { name: name, ty: ty })
+        Ok(VarInfo { name: name, ty: ty })
+    }
+
+    fn typ(&self, tokens: &mut Tokens) -> Result<Type, ParseError> {
+        if tokens.expect_op("&") {
+            let ty = self.typ(tokens)?;
+            match ty {
+                Type::Int8 | Type::Int16 |
+                Type::Int32 | Type::Int64 |
+                Type::Ptr(_) | Type::Slc(_) => {
+                    Ok(Type::Ptr(Box::new(ty)))
+                },
+                Type::Str | Type::Ary(_, _) => {
+                    Ok(Type::Slc(Box::new(ty)))
+                },
+            }
+        } else if tokens.expect_op("[") {
+            let ty = self.typ(tokens)?;
+            self.consume_semicolon(tokens)?;
+            let num = tokens.expect_num()
+                .ok_or(ParseError::new(NumberExpected, tokens))?;
+
+            if !tokens.expect_op("]") {
+                return Err(ParseError::new(ParenExpected, tokens));
+            }
+
+            Ok(Type::Ary(Box::new(ty), num as usize))
         } else {
-            Err(ParseError::new(VariableExpected, tokens))
+            if tokens.expect_rsv("i8") {
+                Ok(Type::Int8)
+            } else if tokens.expect_rsv("i16") {
+                Ok(Type::Int16)
+            } else if tokens.expect_rsv("i32") {
+                Ok(Type::Int32)
+            } else if tokens.expect_rsv("i64") {
+                Ok(Type::Int64)
+            } else if tokens.expect_rsv("str") {
+                Ok(Type::Str)
+            } else {
+                Err(ParseError::new(TypeExpected, tokens))
+            }
         }
     }
 
@@ -640,15 +632,14 @@ impl Parser {
     }
 
     fn assign(&mut self, tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
-        self.equality(tokens)
-            .and_then(|node| {
-                if tokens.expect_op("=") {
-                    self.assign(tokens)
-                        .map(|rhs| new_node_bop(BinaryOpAsn, node, rhs))
-                } else {
-                    Ok(node)
-                }
-            })
+        let node = self.equality(tokens)?;
+
+        if tokens.expect_op("=") {
+            self.assign(tokens)
+                .map(|rhs| new_node_bop(BinaryOpAsn, node, rhs))
+        } else {
+            Ok(node)
+        }
     }
 
     fn expr(&mut self, tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
@@ -657,6 +648,7 @@ impl Parser {
 
     fn blk(&mut self, tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
         self.block_level += 1;
+
         let mut nodes: Vec<Box<Node>> = Vec::new();
         while !tokens.expect_op("}") {
             match self.stmt(tokens) {
@@ -664,7 +656,9 @@ impl Parser {
                 Err(e) => return Err(e),
             }
         }
+
         self.block_level -= 1;
+
         Ok(new_node_blk(nodes))
     }
 
