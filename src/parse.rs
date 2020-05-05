@@ -20,6 +20,7 @@ pub enum ParseErrorKind {
     TypeInvalid,
     UnknownVariable,
     NotInTop,
+    ExprInvalid,
 }
 
 #[derive(Debug)]
@@ -60,6 +61,7 @@ impl fmt::Display for ParseError {
             TypeInvalid => write!(f, "Invalid Type!"),
             UnknownVariable => write!(f, "Unknown variable!"),
             NotInTop => write!(f, "Cannot use in top level"),
+            ExprInvalid => write!(f, "Invalid expression!"),
         }
     }
 }
@@ -275,6 +277,28 @@ fn new_node_ret(rhs: Box<Node>) -> Box<Node> {
     Box::new(node)
 }
 
+fn align_double_word(n: usize) -> usize {
+    let dw = WORDSIZE * 2;
+    if n % dw != 0 {
+        n + (dw - n % dw)
+    } else {
+        n
+    }
+}
+
+fn type_len(ty: &Type) -> usize {
+    match ty {
+        Type::Int8 => 1,
+        Type::Int16 => 2,
+        Type::Int32 => 4,
+        Type::Int64 => 8,
+        Type::Str => unreachable!(), // Str is not first-class type.
+        Type::Ptr(_ty) => WORDSIZE,
+        Type::Slc(_ty) => WORDSIZE * 2,
+        Type::Ary(ty, len) => type_len(&*ty) * len,
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum Type {
     Int8,
@@ -348,28 +372,6 @@ impl Parser {
         &self.literal_list
     }
 
-    fn align_double_word(n: usize) -> usize {
-        let dw = WORDSIZE * 2;
-        if n % dw != 0 {
-            n + (dw - n % dw)
-        } else {
-            n
-        }
-    }
-
-    fn type_len(ty: &Type) -> usize {
-        match ty {
-            Type::Int8 => 1,
-            Type::Int16 => 2,
-            Type::Int32 => 4,
-            Type::Int64 => 8,
-            Type::Str => unreachable!(), // Str is not first-class type.
-            Type::Ptr(_ty) => WORDSIZE,
-            Type::Slc(_ty) => WORDSIZE * 2,
-            Type::Ary(ty, len) => Self::type_len(&*ty) * len,
-        }
-    }
-
     pub fn get_stack_size(&mut self) -> usize {
         let mut total = 0;
         for lvar in &self.lvar_list {
@@ -381,7 +383,7 @@ impl Parser {
                 Type::Str => unreachable!(), // Str is not first-class type.
                 Type::Ptr(_ty) => total += WORDSIZE,
                 Type::Slc(_ty) => total += WORDSIZE * 2,
-                Type::Ary(ty, len) => total += Self::type_len(&**ty) * len,
+                Type::Ary(ty, len) => total += type_len(&**ty) * len,
             }
         }
         total
@@ -404,54 +406,54 @@ impl Parser {
     }
 
     fn var(&mut self, name: &str, tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
-        let mut i = 0;
-        while let Some(lv) = self.lvar_list.get(i) {
-            if lv.name == name.to_string() {
-                let mut offset = lv.offset;
+        let mut lvar_iter = self.lvar_list.iter();
+        while let Some(lv) = lvar_iter.next() {
+            if lv.name != name.to_string() {
+                continue;
+            }
 
-                if tokens.expect_op("[") {
-                    if let Some(num) = tokens.expect_num() {
-                        if tokens.expect_op("]") {
-                            match &lv.ty {
-                                Type::Ary(ty, _) => offset = Self::type_len(&**ty) * (num + 1) as usize,
-                                _ => return Err(ParseError::new_with_offset(TypeInvalid, tokens, 4)),
-                            }
-                        } else {
-                            return Err(ParseError::new(ParenExpected, tokens));
-                        }
-                    } else {
-                        return Err(ParseError::new(NumberExpected, tokens));
-                    }
+            let mut offset = lv.offset;
+
+            if tokens.expect_op("[") {
+                let num = tokens.expect_num()
+                    .ok_or(ParseError::new(NumberExpected, tokens))?;
+                if !tokens.expect_op("]") {
+                    return Err(ParseError::new(ParenExpected, tokens));
                 }
 
-                return Ok(new_node_lvar(offset, lv.ty.clone()));
+                if let Type::Ary(ty, _) = &lv.ty {
+                    offset = type_len(&**ty) * (num + 1) as usize;
+                } else {
+                    return Err(ParseError::new_with_offset(TypeInvalid, tokens, 4));
+                }
             }
-            i += 1;
+
+            return Ok(new_node_lvar(offset, lv.ty.clone()));
         }
 
-        i = 0;
-        while let Some(gv) = self.gvar_list.get(i) {
-            if gv.name == name.to_string() {
-                let mut offset = 0;
+        let mut gvar_iter = self.gvar_list.iter();
+        while let Some(gv) = gvar_iter.next() {
+            if gv.name != name.to_string() {
+                continue;
+            }
 
-                if tokens.expect_op("[") {
-                    if let Some(num) = tokens.expect_num() {
-                        if tokens.expect_op("]") {
-                            match &gv.ty {
-                                Type::Ary(ty, _) => offset = Self::type_len(&**ty) * num as usize,
-                                _ => return Err(ParseError::new_with_offset(TypeInvalid, tokens, 4)),
-                            }
-                        } else {
-                            return Err(ParseError::new(ParenExpected, tokens));
-                        }
-                    } else {
-                        return Err(ParseError::new(NumberExpected, tokens));
-                    }
+            let mut offset = 0;
+
+            if tokens.expect_op("[") {
+                let num = tokens.expect_num()
+                    .ok_or(ParseError::new(NumberExpected, tokens))?;
+                if !tokens.expect_op("]") {
+                    return Err(ParseError::new(ParenExpected, tokens));
                 }
 
-                return Ok(new_node_gvar(name, offset, gv.ty.clone()));
+                if let Type::Ary(ty, _) = &gv.ty {
+                    offset = type_len(&**ty) * (num + 1) as usize;
+                } else {
+                    return Err(ParseError::new_with_offset(TypeInvalid, tokens, 4));
+                }
             }
-            i += 1;
+
+            return Ok(new_node_gvar(name, offset, gv.ty.clone()));
         }
 
         Err(ParseError::new_with_offset(UnknownVariable, tokens, 1))
@@ -459,7 +461,7 @@ impl Parser {
 
     fn bind(&mut self, tokens: &mut Tokens) -> Result<VarInfo, ParseError> {
         let name = tokens.expect_idt()
-            .map(|s| s.to_string())
+            .map(|s| s.to_string()) // Get ownership
             .ok_or(ParseError::new(VariableExpected, tokens))?;
 
         self.consume_colon(tokens)?;
@@ -510,17 +512,13 @@ impl Parser {
     }
 
     fn primary(&mut self, tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
-        if tokens.expect_op("(") {
-            let node = self.expr(tokens)?;
-            if tokens.expect_op(")") {
-                Ok(node)
-            } else {
-                Err(ParseError::new(ParenExpected, tokens))
-            }
+        if let Some(num) = tokens.expect_num() {
+            Ok(new_node_num(num))
+        } else if let Some(slit) = tokens.expect_str() {
+            self.literal_list.push(slit.to_string());
+            Ok(new_node_str(slit, self.literal_list.len() - 1))
         } else if let Some(name) = tokens.expect_idt() {
-            // Get ownership
-            let name = &name.to_string();
-
+            let name = name.to_string(); // Get ownership
             if tokens.expect_op("(") {
                 let mut args: Vec<Box<Node>> = Vec::new();
                 while !tokens.expect_op(")") {
@@ -530,19 +528,18 @@ impl Parser {
                         continue;
                     }
                 }
-
-                Ok(new_node_call(name, args))
+                Ok(new_node_call(&name, args))
             } else {
-                self.var(name, tokens)
+                self.var(&name, tokens)
             }
-        } else if let Some(s) = tokens.expect_str() {
-            let new = s.to_string();
-            self.literal_list.push(new);
-            Ok(new_node_str(s, self.literal_list.len() - 1))
+        } else if tokens.expect_op("(") {
+            let node = self.expr(tokens)?;
+            if !tokens.expect_op(")") {
+                return Err(ParseError::new(ParenExpected, tokens))
+            }
+            Ok(node)
         } else {
-            let num = tokens.expect_num()
-                .ok_or(ParseError::new(NumberExpected, tokens))?;
-            Ok(new_node_num(num))
+            Err(ParseError::new(ExprInvalid, tokens))
         }
     }
 
@@ -663,45 +660,43 @@ impl Parser {
     }
 
     fn func(&mut self, tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
-        if let Some(name) = tokens.expect_idt() {
-            // Get ownership
-            let name = &name.to_string();
+        let name = tokens.expect_idt()
+            .map(|s| s.to_string())
+            .ok_or(ParseError::new(FuncExpected, tokens))?;
 
-            if !tokens.expect_op("(") {
-                return Err(ParseError::new(ArgExpected, tokens));
-            }
-
-            let mut args: Vec<Box<Node>> = Vec::new();
-            while !tokens.expect_op(")") {
-                let vi = self.bind(tokens)?;
-
-                let offset = self.get_stack_size() + Self::type_len(&vi.ty);
-                let new = Lvar {
-                    name: vi.name.clone(),
-                    ty: vi.ty,
-                    offset: offset,
-                };
-                self.lvar_list.push(new);
-
-                let node = self.var(&vi.name, tokens)?;
-                args.push(node);
-                if tokens.expect_op(",") {
-                    continue;
-                }
-            }
-
-            if !tokens.expect_op("{") {
-                return Err(ParseError::new(BlockExpected, tokens));
-            }
-            let block = self.blk(tokens)?;
-
-            let stack = Self::align_double_word(self.get_stack_size());
-            self.lvar_list.clear();
-
-            Ok(new_node_func(name, args, stack, block))
-        } else {
-            Err(ParseError::new(FuncExpected, tokens))
+        if !tokens.expect_op("(") {
+            return Err(ParseError::new(ArgExpected, tokens));
         }
+
+        let mut args: Vec<Box<Node>> = Vec::new();
+        while !tokens.expect_op(")") {
+            let vi = self.bind(tokens)?;
+
+            let offset = self.get_stack_size() + type_len(&vi.ty);
+            let new = Lvar {
+                name: vi.name.clone(),
+                ty: vi.ty,
+                offset: offset,
+            };
+            self.lvar_list.push(new);
+
+            let node = self.var(&vi.name, tokens)?;
+            args.push(node);
+            if tokens.expect_op(",") {
+                continue;
+            }
+        }
+
+        if !tokens.expect_op("{") {
+            return Err(ParseError::new(BlockExpected, tokens));
+        }
+
+        let block = self.blk(tokens)?;
+
+        let stack = align_double_word(self.get_stack_size());
+        self.lvar_list.clear();
+
+        Ok(new_node_func(&name, args, stack, block))
     }
 
     fn ifel(&mut self, tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
@@ -747,7 +742,7 @@ impl Parser {
     fn locl(&mut self, tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
         let vi = self.bind(tokens)?;
 
-        let offset = self.get_stack_size() + Self::type_len(&vi.ty);
+        let offset = self.get_stack_size() + type_len(&vi.ty);
         let new = Lvar {
             name: vi.name,
             ty: vi.ty.clone(),
@@ -783,7 +778,7 @@ impl Parser {
     fn glbl(&mut self, tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
         let vi = self.bind(tokens)?;
 
-        let size = Self::type_len(&vi.ty);
+        let size = type_len(&vi.ty);
         let new = Gvar {
             name: vi.name.clone(),
             ty: vi.ty.clone(),
