@@ -469,6 +469,13 @@ mod tests {
                           fn main() {\
                               return foo();\
                           }", 3);
+        check_return_num("fn main() {\
+                              let a: [i32; 4];\
+                              let b: [i32; 4];\
+                              a[3] = 2;\
+                              b[3] = 3;\
+                              return a[3] + b[3];\
+                          }", 5);
     }
 
     #[test]

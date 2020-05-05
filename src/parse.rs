@@ -422,7 +422,7 @@ impl Parser {
                 }
 
                 if let Type::Ary(ty, _) = &lv.ty {
-                    offset = type_len(&**ty) * (num + 1) as usize;
+                    offset -= type_len(&**ty) * num as usize;
                 } else {
                     return Err(ParseError::new_with_offset(TypeInvalid, tokens, 4));
                 }
