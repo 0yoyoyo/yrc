@@ -320,6 +320,13 @@ mod tests {
                               b[0] = 2;\
                               return a[1] + b[0];\
                           }", 3);
+        check_return_num("static a: [i8; 4];\
+                          static b: i32;\
+                          fn main() {\
+                              b = 2;\
+                              a[3] = 1;\
+                              return a[3] + b;\
+                          }", 3);
     }
 
     #[test]
