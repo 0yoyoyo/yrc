@@ -286,7 +286,7 @@ fn align_double_word(n: usize) -> usize {
     }
 }
 
-fn type_len(ty: &Type) -> usize {
+pub fn type_len(ty: &Type) -> usize {
     match ty {
         Type::Int8 => 1,
         Type::Int16 => 2,
@@ -412,8 +412,6 @@ impl Parser {
                 continue;
             }
 
-            let mut offset = lv.offset;
-
             if tokens.expect_op("[") {
                 let num = tokens.expect_num()
                     .ok_or(ParseError::new(NumberExpected, tokens))?;
@@ -422,13 +420,14 @@ impl Parser {
                 }
 
                 if let Type::Ary(ty, _) = &lv.ty {
-                    offset -= type_len(&**ty) * num as usize;
+                    let offset = lv.offset - type_len(&**ty) * num as usize;
+                    return Ok(new_node_lvar(offset, *ty.clone()));
                 } else {
                     return Err(ParseError::new_with_offset(TypeInvalid, tokens, 4));
                 }
+            } else {
+                return Ok(new_node_lvar(lv.offset, lv.ty.clone()));
             }
-
-            return Ok(new_node_lvar(offset, lv.ty.clone()));
         }
 
         let mut gvar_iter = self.gvar_list.iter();
@@ -436,8 +435,6 @@ impl Parser {
             if gv.name != name.to_string() {
                 continue;
             }
-
-            let mut offset = 0;
 
             if tokens.expect_op("[") {
                 let num = tokens.expect_num()
@@ -447,13 +444,14 @@ impl Parser {
                 }
 
                 if let Type::Ary(ty, _) = &gv.ty {
-                    offset = type_len(&**ty) * num as usize;
+                    let offset = type_len(&**ty) * num as usize;
+                    return Ok(new_node_gvar(name, offset, *ty.clone()));
                 } else {
                     return Err(ParseError::new_with_offset(TypeInvalid, tokens, 4));
                 }
+            } else {
+                return Ok(new_node_gvar(name, 0, gv.ty.clone()));
             }
-
-            return Ok(new_node_gvar(name, offset, gv.ty.clone()));
         }
 
         Err(ParseError::new_with_offset(UnknownVariable, tokens, 1))

@@ -7,7 +7,7 @@ use super::parse::Node;
 use super::parse::BinaryOpKind::*;
 use super::parse::UnaryOpKind::*;
 use super::parse::Type;
-use super::parse::WORDSIZE;
+use super::parse::type_len;
 
 use AsmError::*;
 
@@ -54,19 +54,6 @@ fn is_slice(node: &Box<Node>) -> bool {
         }
     } else {
         false
-    }
-}
-
-fn type_len(ty: &Type) -> usize {
-    match ty {
-        Type::Int8 => 1,
-        Type::Int16 => 2,
-        Type::Int32 => 4,
-        Type::Int64 => 8,
-        Type::Str => unreachable!(), // Str is not first-class type.
-        Type::Ptr(_ty) => WORDSIZE,
-        Type::Slc(_ty) => WORDSIZE * 2,
-        Type::Ary(ty, _len) => type_len(&*ty),
     }
 }
 
