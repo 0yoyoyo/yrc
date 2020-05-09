@@ -7,7 +7,7 @@ use super::parse::Node;
 use super::parse::BinaryOpKind::*;
 use super::parse::UnaryOpKind::*;
 use super::parse::Type;
-use super::parse::type_len;
+use super::parse::type_size;
 
 use AsmError::*;
 
@@ -79,7 +79,7 @@ fn lval_type(node: &Box<Node>) -> Result<&Type, AsmError> {
 
 fn lval_size(node: &Box<Node>) -> Result<usize, AsmError> {
     let ty = lval_type(node)?;
-    Ok(type_len(ty))
+    Ok(type_size(ty))
 }
 
 pub struct AsmGenerator {

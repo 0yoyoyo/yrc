@@ -286,7 +286,7 @@ fn align_double_word(n: usize) -> usize {
     }
 }
 
-pub fn type_len(ty: &Type) -> usize {
+pub fn type_size(ty: &Type) -> usize {
     match ty {
         Type::Int8 => 1,
         Type::Int16 => 2,
@@ -295,7 +295,7 @@ pub fn type_len(ty: &Type) -> usize {
         Type::Str => unreachable!(), // Str is not first-class type.
         Type::Ptr(_ty) => WORDSIZE,
         Type::Slc(_ty) => WORDSIZE * 2,
-        Type::Ary(ty, len) => type_len(&*ty) * len,
+        Type::Ary(ty, len) => type_size(&*ty) * len,
     }
 }
 
@@ -372,7 +372,7 @@ impl Parser {
         &self.literal_list
     }
 
-    pub fn get_stack_size(&mut self) -> usize {
+    pub fn stack_size(&mut self) -> usize {
         let mut total = 0;
         for lvar in &self.lvar_list {
             match &lvar.ty {
@@ -383,7 +383,7 @@ impl Parser {
                 Type::Str => unreachable!(), // Str is not first-class type.
                 Type::Ptr(_ty) => total += WORDSIZE,
                 Type::Slc(_ty) => total += WORDSIZE * 2,
-                Type::Ary(ty, len) => total += type_len(&**ty) * len,
+                Type::Ary(ty, len) => total += type_size(&**ty) * len,
             }
         }
         total
@@ -420,7 +420,7 @@ impl Parser {
                 }
 
                 if let Type::Ary(ty, _) = &lv.ty {
-                    let offset = lv.offset - type_len(&**ty) * num as usize;
+                    let offset = lv.offset - type_size(&**ty) * num as usize;
                     return Ok(new_node_lvar(offset, *ty.clone()));
                 } else {
                     return Err(ParseError::new_with_offset(TypeInvalid, tokens, 4));
@@ -444,7 +444,7 @@ impl Parser {
                 }
 
                 if let Type::Ary(ty, _) = &gv.ty {
-                    let offset = type_len(&**ty) * num as usize;
+                    let offset = type_size(&**ty) * num as usize;
                     return Ok(new_node_gvar(name, offset, *ty.clone()));
                 } else {
                     return Err(ParseError::new_with_offset(TypeInvalid, tokens, 4));
@@ -670,7 +670,7 @@ impl Parser {
         while !tokens.expect_op(")") {
             let vi = self.bind(tokens)?;
 
-            let offset = self.get_stack_size() + type_len(&vi.ty);
+            let offset = self.stack_size() + type_size(&vi.ty);
             let new = Lvar {
                 name: vi.name.clone(),
                 ty: vi.ty,
@@ -691,7 +691,7 @@ impl Parser {
 
         let block = self.blk(tokens)?;
 
-        let stack = align_double_word(self.get_stack_size());
+        let stack = align_double_word(self.stack_size());
         self.lvar_list.clear();
 
         Ok(new_node_func(&name, args, stack, block))
@@ -740,7 +740,7 @@ impl Parser {
     fn locl(&mut self, tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
         let vi = self.bind(tokens)?;
 
-        let offset = self.get_stack_size() + type_len(&vi.ty);
+        let offset = self.stack_size() + type_size(&vi.ty);
         let new = Lvar {
             name: vi.name,
             ty: vi.ty.clone(),
@@ -776,7 +776,7 @@ impl Parser {
     fn glbl(&mut self, tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
         let vi = self.bind(tokens)?;
 
-        let size = type_len(&vi.ty);
+        let size = type_size(&vi.ty);
         let new = Gvar {
             name: vi.name.clone(),
             ty: vi.ty.clone(),
