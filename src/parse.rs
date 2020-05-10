@@ -66,7 +66,7 @@ impl fmt::Display for ParseError {
     }
 }
 
-pub const WORDSIZE: usize = 8;
+const WORDSIZE: usize = 8;
 
 #[derive(Debug, PartialEq)]
 pub enum BinaryOpKind {
@@ -372,7 +372,7 @@ impl Parser {
         &self.literal_list
     }
 
-    pub fn stack_size(&mut self) -> usize {
+    fn stack_size(&mut self) -> usize {
         self.lvar_list.iter()
             .fold(0, |total, lvar| total + type_size(&lvar.ty))
     }
