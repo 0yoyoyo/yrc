@@ -2,7 +2,7 @@ mod token;
 mod parse;
 mod assembly;
 
-//use std::env;
+use std::env;
 use std::str;
 use std::fmt;
 use std::io;
@@ -95,50 +95,59 @@ fn compile_to_fname(formula: &str, fname: &str) -> Result<(), CompileError> {
     Ok(())
 }
 
-fn compile(formula: &str) -> Result<(), CompileError> {
-    compile_to_fname(formula, "tmp")
-}
-
 fn main() {
-    let mut file = File::open("input/tmp.rs").unwrap();
-    let mut contents = String::new();
-    file.read_to_string(&mut contents).unwrap();
+    let args: Vec<String> = env::args().collect();
+    if args.len() < 2 {
+        println!("Input file is needed!");
+        return;
+    }
 
-    match compile(&contents) {
+    let mut opts = getopts::Options::new();
+    opts.optopt("o", "output", "set output file name", "NAME");
+    opts.optflag("s", "asm", "output assemble code");
+    opts.optflag("h", "help", "print this help message");
+
+    let matches = match opts.parse(&args[1..]) {
+        Ok(m) => m,
+        Err(_) => {
+            println!("Invalid option!");
+            return;
+        },
+    };
+
+    if matches.opt_present("h") {
+        println!("{}", opts.usage(""));
+        return;
+    }
+    let _asm_out = matches.opt_present("s");
+    let output_file = if let Some(f) = matches.opt_str("o") {
+        f
+    } else {
+        "tmp".to_string()
+    };
+    let source_code = if let Some(f) = matches.free.get(0) {
+        let mut file = File::open(f).unwrap();
+        let mut contents = String::new();
+        file.read_to_string(&mut contents).unwrap();
+        contents
+    } else {
+        println!("Input file is needed!");
+        return;
+    };
+
+    match compile_to_fname(&source_code, &output_file) {
         Ok(_) => (),
         Err(e) => {
             println!("Error!");
             match e {
                 Env(e) => println!("{}", e),
                 _ => {
-                    println!("{}", &contents.replace("\n", " "));
+                    println!("{}", &source_code.replace("\n", " "));
                     println!("{}", e);
                 },
             };
         },
     };
-
-/*
-    let args: Vec<String> = env::args().collect();
-
-    if args.len() == 2 {
-        match compile(&args[1]) {
-            Ok(_) => (),
-            Err(e) => {
-                println!("Error!");
-                match e {
-                    Env(e) => println!("{}", e),
-                    _ => {
-                        println!("{}", args[1]);
-                        println!("{}", e);
-                    },
-                };
-            },
-        };
-    } else {
-        println!("Invalid number of arguments!");
-    }
-*/
 }
 
 #[cfg(test)]
