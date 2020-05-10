@@ -373,20 +373,8 @@ impl Parser {
     }
 
     pub fn stack_size(&mut self) -> usize {
-        let mut total = 0;
-        for lvar in &self.lvar_list {
-            match &lvar.ty {
-                Type::Int8 => total += 1,
-                Type::Int16 => total += 2,
-                Type::Int32 => total += 4,
-                Type::Int64 => total += 8,
-                Type::Str => unreachable!(), // Str is not first-class type.
-                Type::Ptr(_ty) => total += WORDSIZE,
-                Type::Slc(_ty) => total += WORDSIZE * 2,
-                Type::Ary(ty, len) => total += type_size(&**ty) * len,
-            }
-        }
-        total
+        self.lvar_list.iter()
+            .fold(0, |total, lvar| total + type_size(&lvar.ty))
     }
 
     fn consume_semicolon(&self, tokens: &mut Tokens) -> Result<(), ParseError> {
