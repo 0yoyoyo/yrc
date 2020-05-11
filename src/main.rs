@@ -6,7 +6,6 @@ use std::env;
 use std::str;
 use std::fmt;
 use std::io;
-use std::io::prelude::*;
 use std::fs;
 use std::fs::File;
 
@@ -120,19 +119,22 @@ fn main() {
         return;
     }
     let _asm_out = matches.opt_present("s");
-    let output_file = if let Some(f) = matches.opt_str("o") {
-        f
-    } else {
-        "tmp".to_string()
+    let output_file = matches.opt_str("o")
+        .unwrap_or("tmp".to_string());
+
+    let input_file = match matches.free.get(0) {
+        Some(s) => s,
+        None => {
+            println!("Input file is needed!");
+            return;
+        },
     };
-    let source_code = if let Some(f) = matches.free.get(0) {
-        let mut file = File::open(f).unwrap();
-        let mut contents = String::new();
-        file.read_to_string(&mut contents).unwrap();
-        contents
-    } else {
-        println!("Input file is needed!");
-        return;
+    let source_code = match fs::read_to_string(input_file) {
+        Ok(s) => s,
+        Err(e) => {
+            println!("{}", e);
+            return;
+        },
     };
 
     match compile_to_fname(&source_code, &output_file) {
