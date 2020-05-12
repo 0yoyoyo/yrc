@@ -19,8 +19,6 @@ use assembly::AsmError;
 
 use CompileError::*;
 
-const OUTPUT_DIR: &str = "output";
-
 #[derive(Debug)]
 enum CompileError {
     Env(io::Error),
@@ -64,19 +62,6 @@ impl fmt::Display for CompileError {
     }
 }
 
-fn make_output_dir() -> Result<(), io::Error> {
-    match fs::create_dir(OUTPUT_DIR) {
-        Ok(_) => Ok(()),
-        Err(e) => {
-            if e.kind() == std::io::ErrorKind::AlreadyExists {
-                Ok(())
-            } else {
-                Err(e)
-            }
-        },
-    }
-}
-
 fn compile_to_fname(formula: &str, fname: &str) -> Result<(), CompileError> {
     let token_list = tokenize(formula)?;
     let mut tokens = Tokens::new(token_list);
@@ -84,8 +69,7 @@ fn compile_to_fname(formula: &str, fname: &str) -> Result<(), CompileError> {
     let mut parser = Parser::new();
     let nodes = parser.program(&mut tokens)?;
 
-    make_output_dir()?;
-    let mut f = File::create(format!("{}/{}.s", OUTPUT_DIR, fname))?;
+    let mut f = File::create(format!("{}.s", fname))?;
 
     let literals = parser.literals();
     let mut generator = AsmGenerator::new();
@@ -186,8 +170,8 @@ mod tests {
             .parse()
             .unwrap();
 
-        fs::remove_file(format!("{}/{}.s", OUTPUT_DIR, fname)).unwrap();
-        fs::remove_file(format!("{}/{}", OUTPUT_DIR, fname)).unwrap();
+        fs::remove_file(format!("{}.s", fname)).unwrap();
+        fs::remove_file(format!("{}", fname)).unwrap();
 
         println!("{} -> {} (expected: {})", formula, answer, expect);
         assert_eq!(expect, answer);
