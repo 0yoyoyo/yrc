@@ -8,6 +8,12 @@ use std::fmt;
 use std::io;
 use std::fs;
 use std::fs::File;
+use std::path::Path;
+use std::process::Command;
+use std::process::Output;
+
+use rand::prelude::*;
+use getopts::Options;
 
 use token::tokenize;
 use token::Tokens;
@@ -62,6 +68,19 @@ impl fmt::Display for CompileError {
     }
 }
 
+fn random_string(len: usize) -> String {
+    let source = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ\
+                   abcdefghijklmnopqrstuvwxyz\
+                   0123456789";
+    let mut rng = rand::thread_rng();
+
+    String::from_utf8(
+        source.choose_multiple(&mut rng, len)
+            .cloned()
+            .collect()
+    ).unwrap()
+}
+
 fn compile_to_fname(formula: &str, fname: &str) -> Result<(), CompileError> {
     let token_list = tokenize(formula)?;
     let mut tokens = Tokens::new(token_list);
@@ -69,13 +88,53 @@ fn compile_to_fname(formula: &str, fname: &str) -> Result<(), CompileError> {
     let mut parser = Parser::new();
     let nodes = parser.program(&mut tokens)?;
 
-    let mut f = File::create(format!("{}.s", fname))?;
+    let mut f = File::create(format!("{}", fname))?;
 
     let literals = parser.literals();
     let mut generator = AsmGenerator::new();
     generator.gen_asm(&mut f, &nodes, literals)?;
 
     Ok(())
+}
+
+fn print_output(result: io::Result<Output>) {
+    match result {
+        Ok(output) => {
+            print!("{}", str::from_utf8(&output.stdout).unwrap());
+            print!("{}", str::from_utf8(&output.stderr).unwrap());
+        },
+        Err(e) => {
+            println!("{}", e);
+        },
+    }
+}
+
+fn cmd_assemble(src: &str, dst: &str) {
+    let cmd_result = Command::new("gcc")
+        .arg(src)
+        .arg("-o")
+        .arg(dst)
+        .output();
+
+    print_output(cmd_result);
+}
+
+fn cmd_remove_asm(src: &str) {
+    let cmd_result = Command::new("rm")
+        .arg("-f")
+        .arg(src)
+        .output();
+
+    print_output(cmd_result);
+}
+
+fn cmd_rename_asm(src: &str, dst: &str) {
+    let cmd_result = Command::new("mv")
+        .arg(src)
+        .arg(dst)
+        .output();
+
+    print_output(cmd_result);
 }
 
 fn main() {
@@ -85,7 +144,7 @@ fn main() {
         return;
     }
 
-    let mut opts = getopts::Options::new();
+    let mut opts = Options::new();
     opts.optopt("o", "output", "set output file name", "NAME");
     opts.optflag("s", "asm", "output assemble code");
     opts.optflag("h", "help", "print this help message");
@@ -102,9 +161,8 @@ fn main() {
         println!("{}", opts.usage(""));
         return;
     }
-    let _asm_out = matches.opt_present("s");
-    let output_file = matches.opt_str("o")
-        .unwrap_or("tmp".to_string());
+    let asm_out = matches.opt_present("s");
+    let output_file = matches.opt_str("o");
 
     let input_file = match matches.free.get(0) {
         Some(s) => s,
@@ -113,6 +171,21 @@ fn main() {
             return;
         },
     };
+
+    let path = Path::new(input_file);
+    let default_name = path.file_stem().unwrap().to_str().unwrap();
+    let output_file = match output_file {
+        Some(s) => s,
+        None => {
+            if asm_out {
+                let default_asm_name = format!("{}.s", default_name);
+                default_asm_name.to_string()
+            } else {
+                default_name.to_string()
+            }
+        }
+    };
+
     let source_code = match fs::read_to_string(input_file) {
         Ok(s) => s,
         Err(e) => {
@@ -121,7 +194,9 @@ fn main() {
         },
     };
 
-    match compile_to_fname(&source_code, &output_file) {
+    let tmp_file = format!("tmp{}.s", random_string(8));
+
+    match compile_to_fname(&source_code, &tmp_file) {
         Ok(_) => (),
         Err(e) => {
             println!("Error!");
@@ -130,30 +205,24 @@ fn main() {
                 _ => {
                     println!("{}", &source_code.replace("\n", " "));
                     println!("{}", e);
+                    cmd_remove_asm(&tmp_file);
+                    return;
                 },
             };
         },
     };
+
+    if !asm_out {
+        cmd_assemble(&tmp_file, &output_file);
+    } else {
+        cmd_rename_asm(&tmp_file, &output_file);
+    }
+    cmd_remove_asm(&tmp_file);
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::process::Command;
-    use rand::prelude::*;
-
-    fn random_string(len: usize) -> String {
-        let source = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ\
-                       abcdefghijklmnopqrstuvwxyz\
-                       0123456789";
-        let mut rng = rand::thread_rng();
-
-        String::from_utf8(
-            source.choose_multiple(&mut rng, len)
-                .cloned()
-                .collect()
-        ).unwrap()
-    }
 
     fn check_return_num(formula: &str, expect: u32) {
         let fname = format!("tmp{}", random_string(8));
