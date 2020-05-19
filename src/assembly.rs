@@ -142,8 +142,9 @@ impl AsmGenerator {
             Node::Number { val } => {
                 write!(f, "    push {}\n", val)?;
             },
-            Node::StrLiteral { s: _, label: _ } => {
-                // Do nothing
+            Node::StrLiteral { s: _, label } => {
+                write!(f, "    lea rax, QWORD PTR .LC{}[rip]\n", label)?;
+                write!(f, "    push rax\n")?;
             },
             Node::BinaryOperator { kind, lhs, rhs } => {
                 if *kind == BinaryOpAsn {
@@ -152,9 +153,7 @@ impl AsmGenerator {
                     self.gen_asm_node(f, lhs)?;
                 }
                 self.gen_asm_node(f, rhs)?;
-                if !is_slice(lhs) {
-                    write!(f, "    pop rdi\n")?;
-                }
+                write!(f, "    pop rdi\n")?;
                 write!(f, "    pop rax\n")?;
                 match kind {
                     BinaryOpAdd => {
@@ -193,8 +192,7 @@ impl AsmGenerator {
                     BinaryOpAsn => {
                         if is_slice(lhs) {
                             match &**rhs {
-                                Node::StrLiteral { s, label } => {
-                                    write!(f, "    lea rdi, QWORD PTR .LC{}[rip]\n", label)?;
+                                Node::StrLiteral { s, label: _ } => {
                                     write!(f, "    mov QWORD PTR [rax], rdi\n")?;
                                     write!(f, "    mov QWORD PTR [rax+8], {}\n", s.len())?;
                                 }
