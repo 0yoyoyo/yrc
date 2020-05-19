@@ -104,7 +104,7 @@ impl AsmGenerator {
                     }
                 }
 
-                write!(f, "    call {}\n", name)?;
+                write!(f, "    call {}@PLT\n", name)?;
                 Ok(())
             },
             _ => unreachable!(),
