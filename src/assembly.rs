@@ -87,19 +87,6 @@ pub struct AsmGenerator {
 }
 
 impl AsmGenerator {
-    fn gen_asm_block(&mut self, f: &mut File, nodes: &Vec<Box<Node>>) -> Result<(), AsmError> {
-        let mut iter = nodes.into_iter();
-        while let Some(node) = iter.next() {
-            if is_call(node) {
-                // Do not handle return value when a function is called alone.
-                self.gen_asm_call(f, node)?;
-            } else {
-                self.gen_asm_node(f, node)?;
-            }
-        }
-        Ok(())
-    }
-
     fn gen_asm_call(&mut self, f: &mut File, node: &Box<Node>) -> Result<(), AsmError> {
         match &**node {
             Node::Call { name, args } => {
@@ -279,7 +266,7 @@ impl AsmGenerator {
                 write!(f, "\n")?;
             },
             Node::Block { nodes } => {
-                self.gen_asm_block(f, nodes)?;
+                self.gen_asm_node_stream(f, nodes)?;
             },
             Node::Function { name, args, stack, block } => {
                 write!(f, ".text\n")?;
@@ -361,6 +348,19 @@ impl AsmGenerator {
         Ok(())
     }
 
+    fn gen_asm_node_stream(&mut self, f: &mut File, nodes: &Vec<Box<Node>>) -> Result<(), AsmError> {
+        let mut iter = nodes.into_iter();
+        while let Some(node) = iter.next() {
+            if is_call(node) {
+                // Do not handle return value when a function is called alone.
+                self.gen_asm_call(f, node)?;
+            } else {
+                self.gen_asm_node(f, node)?;
+            }
+        }
+        Ok(())
+    }
+
     pub fn gen_asm(&mut self, f: &mut File, nodes: &Vec<Box<Node>>, literals: &Vec<String>) -> Result<(), AsmError> {
         write!(f, ".intel_syntax noprefix\n")?;
 
@@ -371,14 +371,7 @@ impl AsmGenerator {
             write!(f, "    .ascii \"{}\"\n", lit)?;
         }
 
-        for node in nodes.into_iter() {
-            if is_call(node) {
-                // Do not handle return value when a function is called alone.
-                self.gen_asm_call(f, node)?;
-            } else {
-                self.gen_asm_node(f, node)?;
-            }
-        }
+        self.gen_asm_node_stream(f, nodes)?;
 
         Ok(())
     }
