@@ -76,6 +76,24 @@ impl Tokens {
         }
     }
 
+    pub fn expect_bl(&mut self) -> Option<bool> {
+        let cur_tok = &self.list[self.current];
+        match &cur_tok.kind {
+            TokenRsv(word) => {
+                if word == "true" {
+                    self.current += 1;
+                    Some(true)
+                } else if word == "false" {
+                    self.current += 1;
+                    Some(false)
+                } else {
+                    None
+                }
+            },
+            _ => None
+        }
+    }
+
     pub fn expect_op(&mut self, expect: &str) -> bool {
         let cur_tok = &self.list[self.current];
         match &cur_tok.kind {
@@ -223,11 +241,15 @@ fn lex_word(bytes: &[u8], cur: &mut usize) -> Token {
                name == "continue".to_string() ||
                name == "return"  .to_string() {
                 return Token::new(TokenRsv(name), pos);
-            } else if name == "i8" .to_string() ||
-                      name == "i16".to_string() ||
-                      name == "i32".to_string() ||
-                      name == "i64".to_string() ||
-                      name == "str".to_string() {
+            } else if name == "i8"  .to_string() ||
+                      name == "i16" .to_string() ||
+                      name == "i32" .to_string() ||
+                      name == "i64" .to_string() ||
+                      name == "bool".to_string() ||
+                      name == "str" .to_string() {
+                return Token::new(TokenRsv(name), pos);
+            } else if name == "true" .to_string() ||
+                      name == "false".to_string() {
                 return Token::new(TokenRsv(name), pos);
             } else {
                 return Token::new(TokenIdt(name), pos);

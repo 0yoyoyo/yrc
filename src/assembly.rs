@@ -142,6 +142,13 @@ impl AsmGenerator {
             Node::Number { val } => {
                 write!(f, "    push {}\n", val)?;
             },
+            Node::Bool { bl } => {
+                if *bl {
+                    write!(f, "    push 1\n")?;
+                } else {
+                    write!(f, "    push 0\n")?;
+                }
+            },
             Node::StrLiteral { s: _, label } => {
                 write!(f, "    lea rax, QWORD PTR .LC{}[rip]\n", label)?;
                 write!(f, "    push rax\n")?;

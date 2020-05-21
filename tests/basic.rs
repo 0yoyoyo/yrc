@@ -84,6 +84,26 @@ fn calc_binary() {
 }
 
 #[test]
+fn calc_bool() {
+    check_return_num("fn main() {\
+                          let a: bool;\
+                          a = true;\
+                          if a {\
+                              return 2;\
+                          }\
+                          return 3;\
+                      }", 2);
+    check_return_num("fn main() {\
+                          let a: bool;\
+                          a = false;\
+                          if a {\
+                              return 2;\
+                          }\
+                          return 3;\
+                      }", 3);
+}
+
+#[test]
 fn calc_combination() {
     check_return_num("fn main() { return -1 + 2; }", 1);
     check_return_num("fn main() { return -(1 + 2) + 4; }", 1);

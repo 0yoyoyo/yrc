@@ -101,6 +101,9 @@ pub enum Node {
     Number {
         val: u32,
     },
+    Bool {
+        bl: bool,
+    },
     StrLiteral {
         s: String,
         label: usize,
@@ -174,6 +177,13 @@ fn new_node_uop(kind: UnaryOpKind, rhs: Box<Node>) -> Box<Node> {
 fn new_node_num(val: u32) -> Box<Node> {
     let node = Node::Number {
         val: val,
+    };
+    Box::new(node)
+}
+
+fn new_node_bl(bl: bool) -> Box<Node> {
+    let node = Node::Bool {
+        bl: bl,
     };
     Box::new(node)
 }
@@ -292,6 +302,7 @@ pub fn type_size(ty: &Type) -> usize {
         Type::Int16 => 2,
         Type::Int32 => 4,
         Type::Int64 => 8,
+        Type::Bool => 1,
         Type::Str => unreachable!(), // Str is not first-class type.
         Type::Ptr(_ty) => WORDSIZE,
         Type::Slc(_ty) => WORDSIZE * 2,
@@ -305,6 +316,7 @@ pub enum Type {
     Int16,
     Int32,
     Int64,
+    Bool,
     Str,
     Ptr(Box<Type>),
     Slc(Box<Type>),
@@ -462,6 +474,7 @@ impl Parser {
             match ty {
                 Type::Int8 | Type::Int16 |
                 Type::Int32 | Type::Int64 |
+                Type::Bool |
                 Type::Ptr(_) | Type::Slc(_) => {
                     Ok(Type::Ptr(Box::new(ty)))
                 },
@@ -489,6 +502,8 @@ impl Parser {
                 Ok(Type::Int32)
             } else if tokens.expect_rsv("i64") {
                 Ok(Type::Int64)
+            } else if tokens.expect_rsv("bool") {
+                Ok(Type::Bool)
             } else if tokens.expect_rsv("str") {
                 Ok(Type::Str)
             } else {
@@ -500,6 +515,8 @@ impl Parser {
     fn primary(&mut self, tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
         if let Some(num) = tokens.expect_num() {
             Ok(new_node_num(num))
+        } else if let Some(bl) = tokens.expect_bl() {
+            Ok(new_node_bl(bl))
         } else if let Some(slit) = tokens.expect_str() {
             self.literal_list.push(slit.to_string());
             Ok(new_node_str(slit, self.literal_list.len() - 1))
