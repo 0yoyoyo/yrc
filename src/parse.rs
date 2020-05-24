@@ -138,6 +138,7 @@ pub enum Node {
     Call {
         name: String,
         args: Vec<Box<Node>>,
+        ty: Type,
     },
     If {
         cond: Box<Node>,
@@ -154,6 +155,7 @@ pub enum Node {
     },
     Return {
         rhs: Box<Node>,
+        ty: Type,
     },
 }
 
@@ -247,10 +249,11 @@ fn new_node_func(name: &str, args: Vec<Box<Node>>, stack: usize, block: Box<Node
     Box::new(node)
 }
 
-fn new_node_call(name: &str, args: Vec<Box<Node>>) -> Box<Node> {
+fn new_node_call(name: &str, args: Vec<Box<Node>>, ty: Type) -> Box<Node> {
     let node = Node::Call {
         name: name.to_string(),
         args: args,
+        ty: ty,
     };
     Box::new(node)
 }
@@ -280,9 +283,10 @@ fn new_node_whl(cond: Box<Node>, body: Box<Node>) -> Box<Node> {
     Box::new(node)
 }
 
-fn new_node_ret(rhs: Box<Node>) -> Box<Node> {
+fn new_node_ret(rhs: Box<Node>, ty: Type) -> Box<Node> {
     let node = Node::Return {
         rhs: rhs,
+        ty: ty,
     };
     Box::new(node)
 }
@@ -334,6 +338,11 @@ struct Gvar {
     ty: Type,
 }
 
+struct Func {
+    name: String,
+    ty: Type,
+}
+
 struct VarInfo {
     name: String,
     ty: Type,
@@ -343,7 +352,9 @@ pub struct Parser {
     lvar_list: Vec<Lvar>,
     gvar_list: Vec<Gvar>,
     literal_list: Vec<String>,
+    func_list: Vec<Func>,
     block_level: usize,
+    cur_type: Type,
 }
 
 // Production rules
@@ -374,7 +385,7 @@ pub struct Parser {
 //
 // <stmt> ::= <expr> ";" | <locl> ";" | <ret> ";" | <ifel> | <whl>
 // <blk>  ::= "{" <stmt>* "}"
-// <func> ::= "fn" <idt> "(" <fn_args> ")" <blk>
+// <func> ::= "fn" <idt> "(" <fn_args> ")" "->" <typ> <blk>
 // <bind> ::= <idt> ":" <typ>
 // <glbl> ::= "static" <bind>
 // <top>  ::= <func> | <glbl> ";"
@@ -403,6 +414,19 @@ impl Parser {
         } else {
             Err(ParseError::new(ColonExpected, tokens))
         }
+    }
+
+    fn func_type(&mut self, name: &str, _tokens: &mut Tokens) -> Result<Type, ParseError> {
+        let mut func_iter = self.func_list.iter();
+        while let Some(f) = func_iter.next() {
+            if f.name != name.to_string() {
+                continue;
+            }
+            return Ok(f.ty.clone());
+        }
+        Ok(Type::Int8)
+        // TODO: Function declaration is needed?
+        //Err(ParseError::new_with_offset(UnknownVariable, tokens, 4))
     }
 
     fn var(&mut self, name: &str, tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
@@ -531,7 +555,8 @@ impl Parser {
                         continue;
                     }
                 }
-                Ok(new_node_call(&name, args))
+                let ty = self.func_type(&name, tokens)?;
+                Ok(new_node_call(&name, args, ty))
             } else {
                 self.var(&name, tokens)
             }
@@ -690,6 +715,18 @@ impl Parser {
             }
         }
 
+        self.cur_type = if tokens.expect_op("->") {
+            self.typ(tokens)?
+        } else {
+            Type::Int8
+        };
+
+        let new = Func {
+            name: name.clone(),
+            ty: self.cur_type.clone(),
+        };
+        self.func_list.push(new);
+
         if !tokens.expect_op("{") {
             return Err(ParseError::new(BlockExpected, tokens));
         }
@@ -768,7 +805,7 @@ impl Parser {
             self.consume_semicolon(tokens)?;
         } else if tokens.expect_rsv("return") {
             let rhs = self.expr(tokens)?;
-            node = new_node_ret(rhs);
+            node = new_node_ret(rhs, self.cur_type.clone());
             self.consume_semicolon(tokens)?;
         } else {
             node = self.expr(tokens)?;
@@ -823,7 +860,9 @@ impl Parser {
             lvar_list: Vec::new(),
             gvar_list: Vec::new(),
             literal_list: Vec::new(),
+            func_list: Vec::new(),
             block_level: 0,
+            cur_type: Type::Int8,
         }
     }
 }

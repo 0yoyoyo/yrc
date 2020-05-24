@@ -196,6 +196,22 @@ fn lex_op(bytes: &[u8], cur: &mut usize) -> Token {
     }
 }
 
+fn lex_arw(bytes: &[u8], cur: &mut usize) -> Token {
+    let mut tmp: Vec<u8> = Vec::new();
+    let pos = *cur;
+    loop {
+        tmp.push(bytes[*cur]);
+        *cur += 1;
+        if (*cur >= bytes.len()) ||
+           (!b">".contains(&bytes[*cur])) {
+            let op = str::from_utf8(&tmp)
+                .unwrap()
+                .to_string();
+            return Token::new(TokenOp(op), pos);
+        }
+    }
+}
+
 fn lex_str(bytes: &[u8], cur: &mut usize) -> Token {
     let mut tmp: Vec<u8> = Vec::new();
     let pos = *cur;
@@ -299,8 +315,7 @@ pub fn tokenize(formula: &str) -> Result<Vec<Token>, TokenError> {
                 let token = lex_num(bytes, &mut cur);
                 tokens.push(token);
             },
-            b'+' | b'-' |
-            b'*' |
+            b'+' | b'*' |
             b'(' | b')' |
             b'[' | b']' |
             b'{' | b'}' |
@@ -315,6 +330,10 @@ pub fn tokenize(formula: &str) -> Result<Vec<Token>, TokenError> {
             b'<' | b'>' |
             b'=' | b'!' => {
                 let token = lex_op(bytes, &mut cur);
+                tokens.push(token);
+            },
+            b'-' => {
+                let token = lex_arw(bytes, &mut cur);
                 tokens.push(token);
             },
             b'\"' => {
