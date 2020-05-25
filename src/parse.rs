@@ -306,6 +306,10 @@ pub fn type_size(ty: &Type) -> usize {
         Type::Int16 => 2,
         Type::Int32 => 4,
         Type::Int64 => 8,
+        Type::Uint8 => 1,
+        Type::Uint16 => 2,
+        Type::Uint32 => 4,
+        Type::Uint64 => 8,
         Type::Bool => 1,
         Type::Str => unreachable!(), // Str is not first-class type.
         Type::Ptr(_ty) => WORDSIZE,
@@ -320,6 +324,10 @@ pub enum Type {
     Int16,
     Int32,
     Int64,
+    Uint8,
+    Uint16,
+    Uint32,
+    Uint64,
     Bool,
     Str,
     Ptr(Box<Type>),
@@ -498,6 +506,8 @@ impl Parser {
             match ty {
                 Type::Int8 | Type::Int16 |
                 Type::Int32 | Type::Int64 |
+                Type::Uint8 | Type::Uint16 |
+                Type::Uint32 | Type::Uint64 |
                 Type::Bool |
                 Type::Ptr(_) | Type::Slc(_) => {
                     Ok(Type::Ptr(Box::new(ty)))
@@ -526,6 +536,14 @@ impl Parser {
                 Ok(Type::Int32)
             } else if tokens.expect_rsv("i64") {
                 Ok(Type::Int64)
+            } else if tokens.expect_rsv("u8") {
+                Ok(Type::Uint8)
+            } else if tokens.expect_rsv("u16") {
+                Ok(Type::Uint16)
+            } else if tokens.expect_rsv("u32") {
+                Ok(Type::Uint32)
+            } else if tokens.expect_rsv("u64") {
+                Ok(Type::Uint64)
             } else if tokens.expect_rsv("bool") {
                 Ok(Type::Bool)
             } else if tokens.expect_rsv("str") {

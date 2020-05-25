@@ -261,6 +261,10 @@ fn lex_word(bytes: &[u8], cur: &mut usize) -> Token {
                       name == "i16" .to_string() ||
                       name == "i32" .to_string() ||
                       name == "i64" .to_string() ||
+                      name == "u8"  .to_string() ||
+                      name == "u16" .to_string() ||
+                      name == "u32" .to_string() ||
+                      name == "u64" .to_string() ||
                       name == "bool".to_string() ||
                       name == "str" .to_string() {
                 return Token::new(TokenRsv(name), pos);
