@@ -319,6 +319,9 @@ impl AsmGenerator {
 
                 write!(f, "\n")?;
             },
+            Node::DeclareFunc { name: _, args: _ } => {
+                // Do nothing
+            }
             Node::Call { name: _, args: _, ty } => {
                 self.gen_asm_call(f, node)?;
                 if let Type::Slc(_) = ty {

@@ -135,6 +135,10 @@ pub enum Node {
         stack: usize,
         block: Box<Node>,
     },
+    DeclareFunc {
+        name: String,
+        args: Vec<Box<Node>>,
+    },
     Call {
         name: String,
         args: Vec<Box<Node>>,
@@ -245,6 +249,14 @@ fn new_node_func(name: &str, args: Vec<Box<Node>>, stack: usize, block: Box<Node
         args: args,
         stack: stack,
         block: block,
+    };
+    Box::new(node)
+}
+
+fn new_node_decf(name: &str, args: Vec<Box<Node>>) -> Box<Node> {
+    let node = Node::DeclareFunc {
+        name: name.to_string(),
+        args: args,
     };
     Box::new(node)
 }
@@ -393,7 +405,7 @@ pub struct Parser {
 //
 // <stmt> ::= <expr> ";" | <locl> ";" | <ret> ";" | <ifel> | <whl>
 // <blk>  ::= "{" <stmt>* "}"
-// <func> ::= "fn" <idt> "(" <fn_args> ")" "->" <typ> <blk>
+// <func> ::= "fn" <idt> "(" <fn_args> ")" "->" <typ> (<blk> | ";")
 // <bind> ::= <idt> ":" <typ>
 // <glbl> ::= "static" <bind>
 // <top>  ::= <func> | <glbl> ";"
@@ -424,7 +436,7 @@ impl Parser {
         }
     }
 
-    fn func_type(&mut self, name: &str, _tokens: &mut Tokens) -> Result<Type, ParseError> {
+    fn func_type(&mut self, name: &str, tokens: &mut Tokens) -> Result<Type, ParseError> {
         let mut func_iter = self.func_list.iter();
         while let Some(f) = func_iter.next() {
             if f.name != name.to_string() {
@@ -432,9 +444,9 @@ impl Parser {
             }
             return Ok(f.ty.clone());
         }
-        Ok(Type::Int8)
-        // TODO: Function declaration is needed?
-        //Err(ParseError::new_with_offset(UnknownVariable, tokens, 4))
+        // TODO: Report head of function name as error position.
+        //       (Function tail is reported now.)
+        Err(ParseError::new_with_offset(UnknownVariable, tokens, 1))
     }
 
     fn var(&mut self, name: &str, tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
@@ -745,16 +757,19 @@ impl Parser {
         };
         self.func_list.push(new);
 
-        if !tokens.expect_op("{") {
-            return Err(ParseError::new(BlockExpected, tokens));
+        if tokens.expect_op(";") {
+            Ok(new_node_decf(&name, args))
+        } else if tokens.expect_op("{") {
+            let block = self.blk(tokens)?;
+
+            let stack = align_double_word(self.stack_size());
+            self.lvar_list.clear();
+
+            Ok(new_node_func(&name, args, stack, block))
+        } else {
+            Err(ParseError::new(BlockExpected, tokens))
         }
 
-        let block = self.blk(tokens)?;
-
-        let stack = align_double_word(self.stack_size());
-        self.lvar_list.clear();
-
-        Ok(new_node_func(&name, args, stack, block))
     }
 
     fn ifel(&mut self, tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
