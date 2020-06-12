@@ -326,6 +326,13 @@ fn calc_func() {
                       fn main() {\
                           return foo(1, 2, 3, 4, 5, 6);\
                       }", 42);
+    // To check arguments with calculation.
+    check_return_num("fn foo(a: i32, b: i32) -> i32 {\
+                          return a + b;\
+                      }\
+                      fn main() {\
+                          return foo(4 + 3, 2 + 1);\
+                      }", 10);
 }
 
 #[test]

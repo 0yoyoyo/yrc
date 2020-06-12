@@ -100,10 +100,18 @@ impl AsmGenerator {
                     } else {
                         self.gen_asm_node(f, node)?;
                         write!(f, "    pop rax\n")?;
-                        write!(f, "    mov {}, rax\n", ARG_REGS_64[cnt])?;
+
+                        // Temporarily use r10 register because above gen_asm_node()
+                        // can break rdi register.
+                        if cnt == 0 {
+                            write!(f, "    mov r10, rax\n")?;
+                        } else {
+                            write!(f, "    mov {}, rax\n", ARG_REGS_64[cnt])?;
+                        }
                     }
                 }
 
+                write!(f, "    mov rdi, r10\n")?;
                 write!(f, "    call {}@PLT\n", name)?;
                 Ok(())
             },
