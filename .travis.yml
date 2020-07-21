@@ -3,9 +3,9 @@ language: rust
 dist: bionic
 
 addons:
-    apt:
-        packages:
-            - libssl-dev
+  apt:
+    packages:
+      - libssl-dev
 
 cache: cargo
 
@@ -16,7 +16,7 @@ rust:
 
 jobs:
   allow_failures:
-  - rust: nightly
+    - rust: nightly
 
 before_script: |
   if [[ "$TRAVIS_RUST_VERSION" == stable ]]; then
