@@ -1,5 +1,5 @@
 use std::env;
-use ruscom::compiler_main;
+use yrc::compiler_main;
 
 fn main() {
     let args = env::args().collect();

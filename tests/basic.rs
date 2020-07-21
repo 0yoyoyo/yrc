@@ -1,4 +1,4 @@
-extern crate ruscom;
+extern crate yrc;
 
 use std::str;
 use std::fs;
@@ -7,7 +7,7 @@ use std::process::Command;
 
 use rand::prelude::*;
 
-use ruscom::compiler_main;
+use yrc::compiler_main;
 
 fn random_string(len: usize) -> String {
     let source = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ\
