@@ -223,8 +223,6 @@ impl AsmGenerator {
                                 _ => unreachable!(),
                             }
                         }
-                        // Is this code needed?
-                        //write!(f, "    push rdi\n")?;
                     },
                 }
                 if *kind != BinaryOpAsn {
@@ -258,8 +256,7 @@ impl AsmGenerator {
                         2 => write!(f, "    movsx eax, WORD PTR [rax]\n")?,
                         4 => write!(f, "    mov eax, DWORD PTR [rax]\n")?,
                         8 => write!(f, "    mov rax, QWORD PTR [rax]\n")?,
-                        // Is size check needed here?
-                        _ => write!(f, "    mov rax, QWORD PTR [rax]\n")?,
+                        _ => unreachable!(),
                     }
                     write!(f, "    push rax\n")?;
                 }
