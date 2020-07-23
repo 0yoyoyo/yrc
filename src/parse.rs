@@ -61,7 +61,7 @@ impl fmt::Display for ParseError {
             BlockExpected => write!(f, "Block is expected here!"),
             TypeInvalid => write!(f, "Invalid Type!"),
             UnknownVariable => write!(f, "Unknown variable!"),
-            NotInTop => write!(f, "Cannot use in top level"),
+            NotInTop => write!(f, "Cannot use in top level!"),
             NotSized => write!(f, "Cannot get variable size!"),
             ExprInvalid => write!(f, "Invalid expression!"),
         }
