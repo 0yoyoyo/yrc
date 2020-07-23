@@ -20,6 +20,7 @@ pub enum ParseErrorKind {
     TypeInvalid,
     UnknownVariable,
     NotInTop,
+    NotSized,
     ExprInvalid,
 }
 
@@ -61,6 +62,7 @@ impl fmt::Display for ParseError {
             TypeInvalid => write!(f, "Invalid Type!"),
             UnknownVariable => write!(f, "Unknown variable!"),
             NotInTop => write!(f, "Cannot use in top level"),
+            NotSized => write!(f, "Cannot get variable size!"),
             ExprInvalid => write!(f, "Invalid expression!"),
         }
     }
@@ -330,7 +332,7 @@ pub fn type_size(ty: &Type) -> usize {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Type {
     Int8,
     Int16,
@@ -815,6 +817,10 @@ impl Parser {
     fn locl(&mut self, tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
         let vi = self.bind(tokens)?;
 
+        if vi.ty == Type::Str {
+            return Err(ParseError::new_with_offset(NotSized, tokens, 3));
+        }
+
         let offset = self.stack_size() + type_size(&vi.ty);
         let new = Lvar {
             name: vi.name,
@@ -850,6 +856,10 @@ impl Parser {
 
     fn glbl(&mut self, tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
         let vi = self.bind(tokens)?;
+
+        if vi.ty == Type::Str {
+            return Err(ParseError::new_with_offset(NotSized, tokens, 3));
+        }
 
         let size = type_size(&vi.ty);
         let new = Gvar {
