@@ -92,23 +92,26 @@ impl AsmGenerator {
             Node::Call { name, args, ty: _ } => {
                 let mut swap = false;
                 let iter = args.iter().enumerate();
+                let mut offset = 0;
                 for (cnt, node) in iter {
+                    let index = cnt + offset;
                     if is_slice(node) {
                         self.gen_asm_lval(f, node)?;
                         writeln!(f, "    pop rax")?;
-                        writeln!(f, "    mov {}, QWORD PTR [rax]", ARG_REGS_64[0])?;
-                        writeln!(f, "    mov {}, QWORD PTR [rax+8]", ARG_REGS_64[1])?;
+                        writeln!(f, "    mov {}, QWORD PTR [rax]", ARG_REGS_64[index])?;
+                        writeln!(f, "    mov {}, QWORD PTR [rax+8]", ARG_REGS_64[index + 1])?;
+                        offset = offset + 1;
                     } else {
                         self.gen_asm_node(f, node)?;
                         writeln!(f, "    pop rax")?;
 
                         // Temporarily use r10 register because above gen_asm_node()
                         // can break rdi register.
-                        if cnt == 0 {
+                        if index == 0 {
                             swap = true;
                             writeln!(f, "    mov r10, rax")?;
                         } else {
-                            writeln!(f, "    mov {}, rax", ARG_REGS_64[cnt])?;
+                            writeln!(f, "    mov {}, rax", ARG_REGS_64[index])?;
                         }
                     }
                 }
@@ -307,18 +310,21 @@ impl AsmGenerator {
                 writeln!(f, "    sub rsp, {}", stack)?;
 
                 let iter = args.iter().enumerate();
+                let mut offset = 0;
                 for (cnt, node) in iter {
+                    let index = cnt + offset;
                     self.gen_asm_lval(f, node)?;
                     writeln!(f, "    pop rax")?;
                     if is_slice(node) {
-                        writeln!(f, "    mov QWORD PTR [rax], {}", ARG_REGS_64[0])?;
-                        writeln!(f, "    mov QWORD PTR [rax+8], {}", ARG_REGS_64[1])?;
+                        writeln!(f, "    mov QWORD PTR [rax], {}", ARG_REGS_64[index])?;
+                        writeln!(f, "    mov QWORD PTR [rax+8], {}", ARG_REGS_64[index+1])?;
+                        offset = offset + 1;
                     } else {
                         match lval_size(node)? {
-                            1 => writeln!(f, "    mov BYTE PTR [rax], {}", ARG_REGS_8[cnt])?,
-                            2 => writeln!(f, "    mov WORD PTR [rax], {}", ARG_REGS_16[cnt])?,
-                            4 => writeln!(f, "    mov DWORD PTR [rax], {}", ARG_REGS_32[cnt])?,
-                            8 => writeln!(f, "    mov QWORD PTR [rax], {}", ARG_REGS_64[cnt])?,
+                            1 => writeln!(f, "    mov BYTE PTR [rax], {}", ARG_REGS_8[index])?,
+                            2 => writeln!(f, "    mov WORD PTR [rax], {}", ARG_REGS_16[index])?,
+                            4 => writeln!(f, "    mov DWORD PTR [rax], {}", ARG_REGS_32[index])?,
+                            8 => writeln!(f, "    mov QWORD PTR [rax], {}", ARG_REGS_64[index])?,
                             _ => unreachable!(),
                         }
                     }
