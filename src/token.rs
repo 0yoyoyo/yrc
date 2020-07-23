@@ -152,7 +152,7 @@ impl Tokens {
     }
 
     pub fn head_before(&self, offset: usize) -> Option<usize> {
-        self.list.get(self.current - offset).and_then(|tok| Some(tok.pos))
+        self.list.get(self.current - offset).map(|tok| tok.pos)
     }
 
     pub fn new(v: Vec<Token>) -> Self {
@@ -246,30 +246,28 @@ fn lex_word(bytes: &[u8], cur: &mut usize) -> Token {
             let name = str::from_utf8(&tmp)
                 .unwrap()
                 .to_string();
-            if name == "fn"      .to_string() ||
-               name == "let"     .to_string() ||
-               name == "static"  .to_string() ||
-               name == "if"      .to_string() ||
-               name == "else"    .to_string() ||
-               name == "for"     .to_string() ||
-               name == "while"   .to_string() ||
-               name == "break"   .to_string() ||
-               name == "continue".to_string() ||
-               name == "return"  .to_string() {
-                return Token::new(TokenRsv(name), pos);
-            } else if name == "i8"  .to_string() ||
-                      name == "i16" .to_string() ||
-                      name == "i32" .to_string() ||
-                      name == "i64" .to_string() ||
-                      name == "u8"  .to_string() ||
-                      name == "u16" .to_string() ||
-                      name == "u32" .to_string() ||
-                      name == "u64" .to_string() ||
-                      name == "bool".to_string() ||
-                      name == "str" .to_string() {
-                return Token::new(TokenRsv(name), pos);
-            } else if name == "true" .to_string() ||
-                      name == "false".to_string() {
+            if name == "fn"       ||
+               name == "let"      ||
+               name == "static"   ||
+               name == "if"       ||
+               name == "else"     ||
+               name == "for"      ||
+               name == "while"    ||
+               name == "break"    ||
+               name == "continue" ||
+               name == "return"   ||
+               name == "i8"       ||
+               name == "i16"      ||
+               name == "i32"      ||
+               name == "i64"      ||
+               name == "u8"       ||
+               name == "u16"      ||
+               name == "u32"      ||
+               name == "u64"      ||
+               name == "bool"     ||
+               name == "str"      ||
+               name == "true"     ||
+               name == "false"    {
                 return Token::new(TokenRsv(name), pos);
             } else {
                 return Token::new(TokenIdt(name), pos);
@@ -351,10 +349,10 @@ pub fn tokenize(formula: &str) -> Result<Vec<Token>, TokenError> {
                 tokens.push(token);
             },
             b'/' => {
-                if (cur + 1 <= bytes.len()) &&
+                if (cur < bytes.len()) &&
                    (b"/".contains(&bytes[cur + 1])) {
                     skip_line_comment(bytes, &mut cur);
-                } else if (cur + 1 <= bytes.len()) &&
+                } else if (cur < bytes.len()) &&
                           (b"*".contains(&bytes[cur + 1])) {
                     skip_block_comment(bytes, &mut cur);
                 } else {

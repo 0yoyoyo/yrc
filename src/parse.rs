@@ -167,31 +167,31 @@ pub enum Node {
 
 fn new_node_bop(kind: BinaryOpKind, lhs: Box<Node>, rhs: Box<Node>) -> Box<Node> {
     let node = Node::BinaryOperator {
-        kind: kind,
-        lhs: lhs,
-        rhs: rhs,
+        kind,
+        lhs,
+        rhs,
     };
     Box::new(node)
 }
 
 fn new_node_uop(kind: UnaryOpKind, rhs: Box<Node>) -> Box<Node> {
     let node = Node::UnaryOperator {
-        kind: kind,
-        rhs: rhs,
+        kind,
+        rhs,
     };
     Box::new(node)
 }
 
 fn new_node_num(val: u32) -> Box<Node> {
     let node = Node::Number {
-        val: val,
+        val,
     };
     Box::new(node)
 }
 
 fn new_node_bl(bl: bool) -> Box<Node> {
     let node = Node::Bool {
-        bl: bl,
+        bl,
     };
     Box::new(node)
 }
@@ -199,23 +199,23 @@ fn new_node_bl(bl: bool) -> Box<Node> {
 fn new_node_str(s: &str, label: usize) -> Box<Node> {
     let node = Node::StrLiteral {
         s: s.to_string(),
-        label: label,
+        label,
     };
     Box::new(node)
 }
 
 fn new_node_lvar(offset: usize, ty: Type) -> Box<Node> {
     let node = Node::LocalVariable {
-        offset: offset,
-        ty: ty,
+        offset,
+        ty,
     };
     Box::new(node)
 }
 
 fn new_node_decl(offset: usize, ty: Type) -> Box<Node> {
     let node = Node::DeclareLocal {
-        offset: offset,
-        ty: ty,
+        offset,
+        ty,
     };
     Box::new(node)
 }
@@ -223,8 +223,8 @@ fn new_node_decl(offset: usize, ty: Type) -> Box<Node> {
 fn new_node_gvar(name: &str, offset: usize, ty: Type) -> Box<Node> {
     let node = Node::GlobalVariable {
         name: name.to_string(),
-        offset: offset,
-        ty: ty,
+        offset,
+        ty,
     };
     Box::new(node)
 }
@@ -232,15 +232,15 @@ fn new_node_gvar(name: &str, offset: usize, ty: Type) -> Box<Node> {
 fn new_node_decg(name: &str, size: usize, ty: Type) -> Box<Node> {
     let node = Node::DeclareGlobal {
         name: name.to_string(),
-        size: size,
-        ty: ty,
+        size,
+        ty,
     };
     Box::new(node)
 }
 
 fn new_node_blk(nodes: Vec<Box<Node>>) -> Box<Node> {
     let node = Node::Block {
-        nodes: nodes,
+        nodes,
     };
     Box::new(node)
 }
@@ -248,9 +248,9 @@ fn new_node_blk(nodes: Vec<Box<Node>>) -> Box<Node> {
 fn new_node_func(name: &str, args: Vec<Box<Node>>, stack: usize, block: Box<Node>) -> Box<Node> {
     let node = Node::Function {
         name: name.to_string(),
-        args: args,
-        stack: stack,
-        block: block,
+        args,
+        stack,
+        block,
     };
     Box::new(node)
 }
@@ -258,7 +258,7 @@ fn new_node_func(name: &str, args: Vec<Box<Node>>, stack: usize, block: Box<Node
 fn new_node_decf(name: &str, args: Vec<Box<Node>>) -> Box<Node> {
     let node = Node::DeclareFunc {
         name: name.to_string(),
-        args: args,
+        args,
     };
     Box::new(node)
 }
@@ -266,41 +266,41 @@ fn new_node_decf(name: &str, args: Vec<Box<Node>>) -> Box<Node> {
 fn new_node_call(name: &str, args: Vec<Box<Node>>, ty: Type) -> Box<Node> {
     let node = Node::Call {
         name: name.to_string(),
-        args: args,
-        ty: ty,
+        args,
+        ty,
     };
     Box::new(node)
 }
 
 fn new_node_if(cond: Box<Node>, ibody: Box<Node>) -> Box<Node> {
     let node = Node::If {
-        cond: cond,
-        ibody: ibody,
+        cond,
+        ibody,
     };
     Box::new(node)
 }
 
 fn new_node_ifel(cond: Box<Node>, ibody: Box<Node>, ebody: Box<Node>) -> Box<Node> {
     let node = Node::IfElse {
-        cond: cond,
-        ibody: ibody,
-        ebody: ebody,
+        cond,
+        ibody,
+        ebody,
     };
     Box::new(node)
 }
 
 fn new_node_whl(cond: Box<Node>, body: Box<Node>) -> Box<Node> {
     let node = Node::While {
-        cond: cond,
-        body: body,
+        cond,
+        body,
     };
     Box::new(node)
 }
 
 fn new_node_ret(rhs: Box<Node>, ty: Type) -> Box<Node> {
     let node = Node::Return {
-        rhs: rhs,
-        ty: ty,
+        rhs,
+        ty,
     };
     Box::new(node)
 }
@@ -439,9 +439,9 @@ impl Parser {
     }
 
     fn func_type(&mut self, name: &str, tokens: &mut Tokens) -> Result<Type, ParseError> {
-        let mut func_iter = self.func_list.iter();
-        while let Some(f) = func_iter.next() {
-            if f.name != name.to_string() {
+        let func_iter = self.func_list.iter();
+        for f in func_iter {
+            if f.name != name {
                 continue;
             }
             return Ok(f.ty.clone());
@@ -452,15 +452,15 @@ impl Parser {
     }
 
     fn var(&mut self, name: &str, tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
-        let mut lvar_iter = self.lvar_list.iter();
-        while let Some(lv) = lvar_iter.next() {
-            if lv.name != name.to_string() {
+        let lvar_iter = self.lvar_list.iter();
+        for lv in lvar_iter {
+            if lv.name != name {
                 continue;
             }
 
             if tokens.expect_op("[") {
                 let num = tokens.expect_num()
-                    .ok_or(ParseError::new(NumberExpected, tokens))?;
+                    .ok_or_else(|| ParseError::new(NumberExpected, tokens))?;
                 if !tokens.expect_op("]") {
                     return Err(ParseError::new(ParenExpected, tokens));
                 }
@@ -476,15 +476,15 @@ impl Parser {
             }
         }
 
-        let mut gvar_iter = self.gvar_list.iter();
-        while let Some(gv) = gvar_iter.next() {
-            if gv.name != name.to_string() {
+        let gvar_iter = self.gvar_list.iter();
+        for gv in gvar_iter {
+            if gv.name != name {
                 continue;
             }
 
             if tokens.expect_op("[") {
                 let num = tokens.expect_num()
-                    .ok_or(ParseError::new(NumberExpected, tokens))?;
+                    .ok_or_else(|| ParseError::new(NumberExpected, tokens))?;
                 if !tokens.expect_op("]") {
                     return Err(ParseError::new(ParenExpected, tokens));
                 }
@@ -506,12 +506,12 @@ impl Parser {
     fn bind(&mut self, tokens: &mut Tokens) -> Result<VarInfo, ParseError> {
         let name = tokens.expect_idt()
             .map(|s| s.to_string()) // Get ownership
-            .ok_or(ParseError::new(VariableExpected, tokens))?;
+            .ok_or_else(|| ParseError::new(VariableExpected, tokens))?;
 
         self.consume_colon(tokens)?;
         let ty = self.typ(tokens)?;
 
-        Ok(VarInfo { name: name, ty: ty })
+        Ok(VarInfo { name, ty })
     }
 
     fn typ(&self, tokens: &mut Tokens) -> Result<Type, ParseError> {
@@ -534,37 +534,35 @@ impl Parser {
             let ty = self.typ(tokens)?;
             self.consume_semicolon(tokens)?;
             let num = tokens.expect_num()
-                .ok_or(ParseError::new(NumberExpected, tokens))?;
+                .ok_or_else(|| ParseError::new(NumberExpected, tokens))?;
 
             if !tokens.expect_op("]") {
                 return Err(ParseError::new(ParenExpected, tokens));
             }
 
             Ok(Type::Ary(Box::new(ty), num as usize))
+        } else if tokens.expect_rsv("i8") {
+            Ok(Type::Int8)
+        } else if tokens.expect_rsv("i16") {
+            Ok(Type::Int16)
+        } else if tokens.expect_rsv("i32") {
+            Ok(Type::Int32)
+        } else if tokens.expect_rsv("i64") {
+            Ok(Type::Int64)
+        } else if tokens.expect_rsv("u8") {
+            Ok(Type::Uint8)
+        } else if tokens.expect_rsv("u16") {
+            Ok(Type::Uint16)
+        } else if tokens.expect_rsv("u32") {
+            Ok(Type::Uint32)
+        } else if tokens.expect_rsv("u64") {
+            Ok(Type::Uint64)
+        } else if tokens.expect_rsv("bool") {
+            Ok(Type::Bool)
+        } else if tokens.expect_rsv("str") {
+            Ok(Type::Str)
         } else {
-            if tokens.expect_rsv("i8") {
-                Ok(Type::Int8)
-            } else if tokens.expect_rsv("i16") {
-                Ok(Type::Int16)
-            } else if tokens.expect_rsv("i32") {
-                Ok(Type::Int32)
-            } else if tokens.expect_rsv("i64") {
-                Ok(Type::Int64)
-            } else if tokens.expect_rsv("u8") {
-                Ok(Type::Uint8)
-            } else if tokens.expect_rsv("u16") {
-                Ok(Type::Uint16)
-            } else if tokens.expect_rsv("u32") {
-                Ok(Type::Uint32)
-            } else if tokens.expect_rsv("u64") {
-                Ok(Type::Uint64)
-            } else if tokens.expect_rsv("bool") {
-                Ok(Type::Bool)
-            } else if tokens.expect_rsv("str") {
-                Ok(Type::Str)
-            } else {
-                Err(ParseError::new(TypeExpected, tokens))
-            }
+            Err(ParseError::new(TypeExpected, tokens))
         }
     }
 
@@ -722,7 +720,7 @@ impl Parser {
     fn func(&mut self, tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
         let name = tokens.expect_idt()
             .map(|s| s.to_string())
-            .ok_or(ParseError::new(FuncExpected, tokens))?;
+            .ok_or_else(|| ParseError::new(FuncExpected, tokens))?;
 
         if !tokens.expect_op("(") {
             return Err(ParseError::new(ArgExpected, tokens));
@@ -736,7 +734,7 @@ impl Parser {
             let new = Lvar {
                 name: vi.name.clone(),
                 ty: vi.ty,
-                offset: offset,
+                offset,
             };
             self.lvar_list.push(new);
 
@@ -779,20 +777,18 @@ impl Parser {
 
         let cond = self.expr(tokens)?;
 
-        let ibody: Box<Node>;
-        if tokens.expect_op("{") {
-            ibody = self.blk(tokens)?;
+        let ibody = if tokens.expect_op("{") {
+            self.blk(tokens)?
         } else {
-            ibody = self.stmt(tokens)?;
-        }
+            self.stmt(tokens)?
+        };
 
         if tokens.expect_rsv("else") {
-            let ebody: Box<Node>;
-            if tokens.expect_op("{") {
-                ebody = self.blk(tokens)?;
+            let ebody = if tokens.expect_op("{") {
+                self.blk(tokens)?
             } else {
-                ebody = self.stmt(tokens)?;
-            }
+                self.stmt(tokens)?
+            };
             node = new_node_ifel(cond, ibody, ebody);
         } else {
             node = new_node_if(cond, ibody);
@@ -804,12 +800,11 @@ impl Parser {
     fn whl(&mut self, tokens: &mut Tokens) -> Result<Box<Node>, ParseError> {
         let cond = self.expr(tokens)?;
 
-        let body: Box<Node>;
-        if tokens.expect_op("{") {
-            body = self.blk(tokens)?;
+        let body = if tokens.expect_op("{") {
+            self.blk(tokens)?
         } else {
-            body = self.stmt(tokens)?;
-        }
+            self.stmt(tokens)?
+        };
 
         Ok(new_node_whl(cond, body))
     }
@@ -825,7 +820,7 @@ impl Parser {
         let new = Lvar {
             name: vi.name,
             ty: vi.ty.clone(),
-            offset: offset,
+            offset,
         };
         self.lvar_list.push(new);
 

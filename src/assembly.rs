@@ -90,29 +90,29 @@ impl AsmGenerator {
     fn gen_asm_call(&mut self, f: &mut File, node: &Box<Node>) -> Result<(), AsmError> {
         match &**node {
             Node::Call { name, args, ty: _ } => {
-                let mut iter = args.into_iter().enumerate();
-                while let Some((cnt, node)) = iter.next() {
+                let iter = args.iter().enumerate();
+                for (cnt, node) in iter {
                     if is_slice(node) {
                         self.gen_asm_lval(f, node)?;
-                        write!(f, "    pop rax\n")?;
-                        write!(f, "    mov {}, QWORD PTR [rax]\n", ARG_REGS_64[0])?;
-                        write!(f, "    mov {}, QWORD PTR [rax+8]\n", ARG_REGS_64[1])?;
+                        writeln!(f, "    pop rax")?;
+                        writeln!(f, "    mov {}, QWORD PTR [rax]", ARG_REGS_64[0])?;
+                        writeln!(f, "    mov {}, QWORD PTR [rax+8]", ARG_REGS_64[1])?;
                     } else {
                         self.gen_asm_node(f, node)?;
-                        write!(f, "    pop rax\n")?;
+                        writeln!(f, "    pop rax")?;
 
                         // Temporarily use r10 register because above gen_asm_node()
                         // can break rdi register.
                         if cnt == 0 {
-                            write!(f, "    mov r10, rax\n")?;
+                            writeln!(f, "    mov r10, rax")?;
                         } else {
-                            write!(f, "    mov {}, rax\n", ARG_REGS_64[cnt])?;
+                            writeln!(f, "    mov {}, rax", ARG_REGS_64[cnt])?;
                         }
                     }
                 }
 
-                write!(f, "    mov rdi, r10\n")?;
-                write!(f, "    call {}@PLT\n", name)?;
+                writeln!(f, "    mov rdi, r10")?;
+                writeln!(f, "    call {}@PLT", name)?;
                 Ok(())
             },
             _ => unreachable!(),
@@ -122,14 +122,14 @@ impl AsmGenerator {
     fn gen_asm_lval(&mut self, f: &mut File, node: &Box<Node>) -> Result<(), AsmError> {
         match &**node {
             Node::LocalVariable { offset, ty: _ } => {
-                write!(f, "    mov rax, rbp\n")?;
-                write!(f, "    sub rax, {}\n", offset)?;
-                write!(f, "    push rax\n")?;
+                writeln!(f, "    mov rax, rbp")?;
+                writeln!(f, "    sub rax, {}", offset)?;
+                writeln!(f, "    push rax")?;
                 Ok(())
             },
             Node::GlobalVariable { name, offset, ty: _ } => {
-                write!(f, "    lea rax, QWORD PTR {}[rip+{}]\n", name, offset)?;
-                write!(f, "    push rax\n")?;
+                writeln!(f, "    lea rax, QWORD PTR {}[rip+{}]", name, offset)?;
+                writeln!(f, "    push rax")?;
                 Ok(())
             },
             Node::UnaryOperator { kind, rhs } => {
@@ -148,19 +148,19 @@ impl AsmGenerator {
     fn gen_asm_node(&mut self, f: &mut File, node: &Box<Node>) -> Result<(), AsmError> {
         match &**node {
             Node::Number { val } => {
-                write!(f, "    push {}\n", val)?;
+                writeln!(f, "    push {}", val)?;
             },
             Node::Bool { bl } => {
                 if *bl {
-                    write!(f, "    push 1\n")?;
+                    writeln!(f, "    push 1")?;
                 } else {
-                    write!(f, "    push 0\n")?;
+                    writeln!(f, "    push 0")?;
                 }
             },
             Node::StrLiteral { s, label } => {
-                write!(f, "    lea rax, QWORD PTR .LC{}[rip]\n", label)?;
-                write!(f, "    push rax\n")?;
-                write!(f, "    push {}\n", s.len())?;
+                writeln!(f, "    lea rax, QWORD PTR .LC{}[rip]", label)?;
+                writeln!(f, "    push rax")?;
+                writeln!(f, "    push {}", s.len())?;
             },
             Node::BinaryOperator { kind, lhs, rhs } => {
                 if *kind == BinaryOpAsn {
@@ -170,63 +170,63 @@ impl AsmGenerator {
                 }
                 self.gen_asm_node(f, rhs)?;
                 if is_slice(lhs) {
-                    write!(f, "    pop rdx\n")?;
-                    write!(f, "    pop rdi\n")?;
+                    writeln!(f, "    pop rdx")?;
+                    writeln!(f, "    pop rdi")?;
                 } else {
-                    write!(f, "    pop rdi\n")?;
+                    writeln!(f, "    pop rdi")?;
                 }
-                write!(f, "    pop rax\n")?;
+                writeln!(f, "    pop rax")?;
                 match kind {
                     BinaryOpAdd => {
-                        write!(f, "    add rax, rdi\n")?;
+                        writeln!(f, "    add rax, rdi")?;
                     },
                     BinaryOpSub => {
-                        write!(f, "    sub rax, rdi\n")?;
+                        writeln!(f, "    sub rax, rdi")?;
                     },
                     BinaryOpMul => {
-                        write!(f, "    imul rax, rdi\n")?;
+                        writeln!(f, "    imul rax, rdi")?;
                     },
                     BinaryOpDiv => {
-                        write!(f, "    cqo\n")?;
-                        write!(f, "    idiv rdi\n")?;
+                        writeln!(f, "    cqo")?;
+                        writeln!(f, "    idiv rdi")?;
                     },
                     BinaryOpEq => {
-                        write!(f, "    cmp rax, rdi\n")?;
-                        write!(f, "    sete al\n")?;
-                        write!(f, "    movzb rax, al\n")?;
+                        writeln!(f, "    cmp rax, rdi")?;
+                        writeln!(f, "    sete al")?;
+                        writeln!(f, "    movzb rax, al")?;
                     },
                     BinaryOpNe => {
-                        write!(f, "    cmp rax, rdi\n")?;
-                        write!(f, "    setne al\n")?;
-                        write!(f, "    movzb rax, al\n")?;
+                        writeln!(f, "    cmp rax, rdi")?;
+                        writeln!(f, "    setne al")?;
+                        writeln!(f, "    movzb rax, al")?;
                     },
                     BinaryOpGr => {
-                        write!(f, "    cmp rax, rdi\n")?;
-                        write!(f, "    setl al\n")?;
-                        write!(f, "    movzb rax, al\n")?;
+                        writeln!(f, "    cmp rax, rdi")?;
+                        writeln!(f, "    setl al")?;
+                        writeln!(f, "    movzb rax, al")?;
                     },
                     BinaryOpGe => {
-                        write!(f, "    cmp rax, rdi\n")?;
-                        write!(f, "    setle al\n")?;
-                        write!(f, "    movzb rax, al\n")?;
+                        writeln!(f, "    cmp rax, rdi")?;
+                        writeln!(f, "    setle al")?;
+                        writeln!(f, "    movzb rax, al")?;
                     },
                     BinaryOpAsn => {
                         if is_slice(lhs) {
-                            write!(f, "    mov QWORD PTR [rax], rdi\n")?;
-                            write!(f, "    mov QWORD PTR [rax+8], rdx\n")?;
+                            writeln!(f, "    mov QWORD PTR [rax], rdi")?;
+                            writeln!(f, "    mov QWORD PTR [rax+8], rdx")?;
                         } else {
                             match lval_size(lhs)? {
-                                1 => write!(f, "    mov BYTE PTR [rax], dil\n")?,
-                                2 => write!(f, "    mov WORD PTR [rax], di\n")?,
-                                4 => write!(f, "    mov DWORD PTR [rax], edi\n")?,
-                                8 => write!(f, "    mov QWORD PTR [rax], rdi\n")?,
+                                1 => writeln!(f, "    mov BYTE PTR [rax], dil")?,
+                                2 => writeln!(f, "    mov WORD PTR [rax], di")?,
+                                4 => writeln!(f, "    mov DWORD PTR [rax], edi")?,
+                                8 => writeln!(f, "    mov QWORD PTR [rax], rdi")?,
                                 _ => unreachable!(),
                             }
                         }
                     },
                 }
                 if *kind != BinaryOpAsn {
-                    write!(f, "    push rax\n")?;
+                    writeln!(f, "    push rax\n")?;
                 }
             },
             Node::UnaryOperator { kind, rhs } => {
@@ -236,29 +236,29 @@ impl AsmGenerator {
                     }
                     UnaryOpDrf => {
                         self.gen_asm_node(f, rhs)?;
-                        write!(f, "    pop rax\n")?;
-                        write!(f, "    mov rax, QWORD PTR [rax]\n")?;
-                        write!(f, "    push rax\n")?;
+                        writeln!(f, "    pop rax")?;
+                        writeln!(f, "    mov rax, QWORD PTR [rax]")?;
+                        writeln!(f, "    push rax")?;
                     }
                 }
             },
             Node::LocalVariable { offset: _, ty: _ } => {
                 self.gen_asm_lval(f, node)?;
-                write!(f, "    pop rax\n")?;
+                writeln!(f, "    pop rax\n")?;
                 if is_slice(node) {
-                    write!(f, "    mov rdi, QWORD PTR [rax]\n")?;
-                    write!(f, "    mov rax, QWORD PTR [rax+8]\n")?;
-                    write!(f, "    push rdi\n")?;
-                    write!(f, "    push rax\n")?;
+                    writeln!(f, "    mov rdi, QWORD PTR [rax]")?;
+                    writeln!(f, "    mov rax, QWORD PTR [rax+8]")?;
+                    writeln!(f, "    push rdi")?;
+                    writeln!(f, "    push rax")?;
                 } else {
                     match lval_size(node)? {
-                        1 => write!(f, "    movsx eax, BYTE PTR [rax]\n")?,
-                        2 => write!(f, "    movsx eax, WORD PTR [rax]\n")?,
-                        4 => write!(f, "    mov eax, DWORD PTR [rax]\n")?,
-                        8 => write!(f, "    mov rax, QWORD PTR [rax]\n")?,
+                        1 => writeln!(f, "    movsx eax, BYTE PTR [rax]")?,
+                        2 => writeln!(f, "    movsx eax, WORD PTR [rax]")?,
+                        4 => writeln!(f, "    mov eax, DWORD PTR [rax]")?,
+                        8 => writeln!(f, "    mov rax, QWORD PTR [rax]")?,
                         _ => unreachable!(),
                     }
-                    write!(f, "    push rax\n")?;
+                    writeln!(f, "    push rax")?;
                 }
             },
             Node::DeclareLocal { offset: _, ty: _ } => {
@@ -266,55 +266,55 @@ impl AsmGenerator {
             },
             Node::GlobalVariable { name: _, offset: _, ty: _ } => {
                 self.gen_asm_lval(f, node)?;
-                write!(f, "    pop rax\n")?;
+                writeln!(f, "    pop rax\n")?;
                 if is_slice(node) {
-                    write!(f, "    mov rdi, QWORD PTR [rax]\n")?;
-                    write!(f, "    mov rax, QWORD PTR [rax+8]\n")?;
-                    write!(f, "    push rdi\n")?;
-                    write!(f, "    push rax\n")?;
+                    writeln!(f, "    mov rdi, QWORD PTR [rax]")?;
+                    writeln!(f, "    mov rax, QWORD PTR [rax+8]")?;
+                    writeln!(f, "    push rdi")?;
+                    writeln!(f, "    push rax")?;
                 } else {
                     match lval_size(node)? {
-                        1 => write!(f, "    movsx eax, BYTE PTR [rax]\n")?,
-                        2 => write!(f, "    movsx eax, WORD PTR [rax]\n")?,
-                        4 => write!(f, "    mov eax, DWORD PTR [rax]\n")?,
-                        8 => write!(f, "    mov rax, QWORD PTR [rax]\n")?,
+                        1 => writeln!(f, "    movsx eax, BYTE PTR [rax]")?,
+                        2 => writeln!(f, "    movsx eax, WORD PTR [rax]")?,
+                        4 => writeln!(f, "    mov eax, DWORD PTR [rax]")?,
+                        8 => writeln!(f, "    mov rax, QWORD PTR [rax]")?,
                         _ => unreachable!(),
                     }
-                    write!(f, "    push rax\n")?;
+                    writeln!(f, "    push rax")?;
                 }
             },
             Node::DeclareGlobal { name, size, ty: _ } => {
-                write!(f, ".bss\n")?;
-                write!(f, ".global {}\n", name)?;
-                write!(f, "{}:\n", name)?;
-                write!(f, "    .zero {}\n", size)?;
-                write!(f, "\n")?;
+                writeln!(f, ".bss")?;
+                writeln!(f, ".global {}", name)?;
+                writeln!(f, "{}:", name)?;
+                writeln!(f, "    .zero {}", size)?;
+                writeln!(f)?;
             },
             Node::Block { nodes } => {
                 self.gen_asm_node_stream(f, nodes)?;
             },
             Node::Function { name, args, stack, block } => {
-                write!(f, ".text\n")?;
-                write!(f, ".global {}\n", name)?;
-                write!(f, "{}:\n", name)?;
+                writeln!(f, ".text")?;
+                writeln!(f, ".global {}", name)?;
+                writeln!(f, "{}:", name)?;
 
-                write!(f, "    push rbp\n")?;
-                write!(f, "    mov rbp, rsp\n")?;
-                write!(f, "    sub rsp, {}\n", stack)?;
+                writeln!(f, "    push rbp")?;
+                writeln!(f, "    mov rbp, rsp")?;
+                writeln!(f, "    sub rsp, {}", stack)?;
 
-                let mut iter = args.into_iter().enumerate();
-                while let Some((cnt, node)) = iter.next() {
+                let iter = args.iter().enumerate();
+                for (cnt, node) in iter {
                     self.gen_asm_lval(f, node)?;
-                    write!(f, "    pop rax\n")?;
+                    writeln!(f, "    pop rax")?;
                     if is_slice(node) {
-                        write!(f, "    mov QWORD PTR [rax], {}\n", ARG_REGS_64[0])?;
-                        write!(f, "    mov QWORD PTR [rax+8], {}\n", ARG_REGS_64[1])?;
+                        writeln!(f, "    mov QWORD PTR [rax], {}", ARG_REGS_64[0])?;
+                        writeln!(f, "    mov QWORD PTR [rax+8], {}", ARG_REGS_64[1])?;
                     } else {
                         match lval_size(node)? {
-                            1 => write!(f, "    mov BYTE PTR [rax], {}\n", ARG_REGS_8[cnt])?,
-                            2 => write!(f, "    mov WORD PTR [rax], {}\n", ARG_REGS_16[cnt])?,
-                            4 => write!(f, "    mov DWORD PTR [rax], {}\n", ARG_REGS_32[cnt])?,
-                            8 => write!(f, "    mov QWORD PTR [rax], {}\n", ARG_REGS_64[cnt])?,
+                            1 => writeln!(f, "    mov BYTE PTR [rax], {}", ARG_REGS_8[cnt])?,
+                            2 => writeln!(f, "    mov WORD PTR [rax], {}", ARG_REGS_16[cnt])?,
+                            4 => writeln!(f, "    mov DWORD PTR [rax], {}", ARG_REGS_32[cnt])?,
+                            8 => writeln!(f, "    mov QWORD PTR [rax], {}", ARG_REGS_64[cnt])?,
                             _ => unreachable!(),
                         }
                     }
@@ -322,7 +322,7 @@ impl AsmGenerator {
 
                 self.gen_asm_node(f, block)?;
 
-                write!(f, "\n")?;
+                writeln!(f)?;
             },
             Node::DeclareFunc { name: _, args: _ } => {
                 // Do nothing
@@ -330,10 +330,10 @@ impl AsmGenerator {
             Node::Call { name: _, args: _, ty } => {
                 self.gen_asm_call(f, node)?;
                 if let Type::Slc(_) = ty {
-                    write!(f, "    push rdx\n")?;
-                    write!(f, "    push rax\n")?;
+                    writeln!(f, "    push rdx")?;
+                    writeln!(f, "    push rax")?;
                 } else {
-                    write!(f, "    push rax\n")?;
+                    writeln!(f, "    push rax")?;
                 }
             },
             Node::If { cond, ibody } => {
@@ -341,50 +341,50 @@ impl AsmGenerator {
                 self.label_count += 1;
 
                 self.gen_asm_node(f, cond)?;
-                write!(f, "    pop rax\n")?;
-                write!(f, "    cmp rax, 0\n")?;
-                write!(f, "    je  .Lend{}\n", lcnt)?;
+                writeln!(f, "    pop rax")?;
+                writeln!(f, "    cmp rax, 0")?;
+                writeln!(f, "    je  .Lend{}", lcnt)?;
                 self.gen_asm_node(f, ibody)?;
-                write!(f, ".Lend{}:\n", lcnt)?;
+                writeln!(f, ".Lend{}:", lcnt)?;
             },
             Node::IfElse { cond, ibody, ebody } => {
                 let lcnt = self.label_count;
                 self.label_count += 1;
 
                 self.gen_asm_node(f, cond)?;
-                write!(f, "    pop rax\n")?;
-                write!(f, "    cmp rax, 0\n")?;
-                write!(f, "    je  .Lelse{}\n", lcnt)?;
+                writeln!(f, "    pop rax")?;
+                writeln!(f, "    cmp rax, 0")?;
+                writeln!(f, "    je  .Lelse{}", lcnt)?;
                 self.gen_asm_node(f, ibody)?;
-                write!(f, "    jmp  .Lend{}\n", lcnt)?;
-                write!(f, ".Lelse{}:\n", lcnt)?;
+                writeln!(f, "    jmp  .Lend{}", lcnt)?;
+                writeln!(f, ".Lelse{}:", lcnt)?;
                 self.gen_asm_node(f, ebody)?;
-                write!(f, ".Lend{}:\n", lcnt)?;
+                writeln!(f, ".Lend{}:", lcnt)?;
             },
             Node::While { cond, body } => {
                 let lcnt = self.label_count;
                 self.label_count += 1;
 
-                write!(f, ".Lbegin{}:\n", lcnt)?;
+                writeln!(f, ".Lbegin{}:", lcnt)?;
                 self.gen_asm_node(f, cond)?;
-                write!(f, "    pop rax\n")?;
-                write!(f, "    cmp rax, 0\n")?;
-                write!(f, "    je  .Lend{}\n", lcnt)?;
+                writeln!(f, "    pop rax")?;
+                writeln!(f, "    cmp rax, 0")?;
+                writeln!(f, "    je  .Lend{}", lcnt)?;
                 self.gen_asm_node(f, body)?;
-                write!(f, "    jmp  .Lbegin{}\n", lcnt)?;
-                write!(f, ".Lend{}:\n", lcnt)?;
+                writeln!(f, "    jmp  .Lbegin{}", lcnt)?;
+                writeln!(f, ".Lend{}:", lcnt)?;
             },
             Node::Return { rhs, ty } => {
                 self.gen_asm_node(f, rhs)?;
                 if let Type::Slc(_) = ty {
-                    write!(f, "    pop rax\n")?;
-                    write!(f, "    pop rdx\n")?;
+                    writeln!(f, "    pop rax")?;
+                    writeln!(f, "    pop rdx")?;
                 } else {
-                    write!(f, "    pop rax\n")?;
+                    writeln!(f, "    pop rax")?;
                 }
-                write!(f, "    mov rsp, rbp\n")?;
-                write!(f, "    pop rbp\n")?;
-                write!(f, "    ret\n")?;
+                writeln!(f, "    mov rsp, rbp")?;
+                writeln!(f, "    pop rbp")?;
+                writeln!(f, "    ret")?;
             },
         }
 
@@ -392,8 +392,8 @@ impl AsmGenerator {
     }
 
     fn gen_asm_node_stream(&mut self, f: &mut File, nodes: &Vec<Box<Node>>) -> Result<(), AsmError> {
-        let mut iter = nodes.into_iter();
-        while let Some(node) = iter.next() {
+        let iter = nodes.iter();
+        for node in iter {
             if is_call(node) {
                 // Do not handle return value when a function is called alone.
                 self.gen_asm_call(f, node)?;
@@ -405,13 +405,13 @@ impl AsmGenerator {
     }
 
     pub fn gen_asm(&mut self, f: &mut File, nodes: &Vec<Box<Node>>, literals: &Vec<String>) -> Result<(), AsmError> {
-        write!(f, ".intel_syntax noprefix\n")?;
+        writeln!(f, ".intel_syntax noprefix")?;
 
-        write!(f, ".section .rodata\n")?;
-        let mut iter = literals.into_iter().enumerate();
-        while let Some((cnt, lit)) = iter.next() {
-            write!(f, ".LC{}:\n", cnt)?;
-            write!(f, "    .ascii \"{}\"\n", lit)?;
+        writeln!(f, ".section .rodata")?;
+        let iter = literals.iter().enumerate();
+        for (cnt, lit) in iter {
+            writeln!(f, ".LC{}:", cnt)?;
+            writeln!(f, "    .ascii \"{}\"", lit)?;
         }
 
         self.gen_asm_node_stream(f, nodes)?;

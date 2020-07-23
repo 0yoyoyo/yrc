@@ -87,7 +87,7 @@ fn compile_to_fname(formula: &str, fname: &str) -> Result<(), CompileError> {
     let mut parser = Parser::new();
     let nodes = parser.program(&mut tokens)?;
 
-    let mut f = File::create(format!("{}", fname))?;
+    let mut f = File::create(fname.to_string())?;
 
     let literals = parser.literals();
     let mut generator = AsmGenerator::new();
@@ -177,7 +177,7 @@ pub fn compiler_main(args: Vec<String>) {
         None => {
             if asm_out {
                 let default_asm_name = format!("{}.s", default_name);
-                default_asm_name.to_string()
+                default_asm_name
             } else {
                 default_name.to_string()
             }
