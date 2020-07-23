@@ -90,6 +90,7 @@ impl AsmGenerator {
     fn gen_asm_call(&mut self, f: &mut File, node: &Box<Node>) -> Result<(), AsmError> {
         match &**node {
             Node::Call { name, args, ty: _ } => {
+                let mut swap = false;
                 let iter = args.iter().enumerate();
                 for (cnt, node) in iter {
                     if is_slice(node) {
@@ -104,6 +105,7 @@ impl AsmGenerator {
                         // Temporarily use r10 register because above gen_asm_node()
                         // can break rdi register.
                         if cnt == 0 {
+                            swap = true;
                             writeln!(f, "    mov r10, rax")?;
                         } else {
                             writeln!(f, "    mov {}, rax", ARG_REGS_64[cnt])?;
@@ -111,7 +113,9 @@ impl AsmGenerator {
                     }
                 }
 
-                writeln!(f, "    mov rdi, r10")?;
+                if swap {
+                    writeln!(f, "    mov rdi, r10")?;
+                }
                 writeln!(f, "    call {}@PLT", name)?;
                 Ok(())
             },
