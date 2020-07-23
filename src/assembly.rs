@@ -100,7 +100,7 @@ impl AsmGenerator {
                         writeln!(f, "    pop rax")?;
                         writeln!(f, "    mov {}, QWORD PTR [rax]", ARG_REGS_64[index])?;
                         writeln!(f, "    mov {}, QWORD PTR [rax+8]", ARG_REGS_64[index + 1])?;
-                        offset = offset + 1;
+                        offset += 1;
                     } else {
                         self.gen_asm_node(f, node)?;
                         writeln!(f, "    pop rax")?;
@@ -318,7 +318,7 @@ impl AsmGenerator {
                     if is_slice(node) {
                         writeln!(f, "    mov QWORD PTR [rax], {}", ARG_REGS_64[index])?;
                         writeln!(f, "    mov QWORD PTR [rax+8], {}", ARG_REGS_64[index+1])?;
-                        offset = offset + 1;
+                        offset += 1;
                     } else {
                         match lval_size(node)? {
                             1 => writeln!(f, "    mov BYTE PTR [rax], {}", ARG_REGS_8[index])?,
