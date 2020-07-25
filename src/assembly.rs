@@ -16,6 +16,9 @@ const ARG_REGS_32: [&str; 6] = ["edi", "esi", "edx", "ecx", "r8d", "r9d"];
 const ARG_REGS_16: [&str; 6] = [ "di",  "si",  "dx",  "cx", "r8d", "r9d"];
 const ARG_REGS_8:  [&str; 6] = ["dil", "sil",  "dl",  "cl", "r8d", "r9d"];
 
+const CALC_REGS: [[&str; 4]; 2] = [["al",  "ax", "eax", "rax"],
+                                   ["dil", "di", "edi", "rdi"]];
+
 #[derive(Debug)]
 pub enum AsmError {
     Io(io::Error),
@@ -198,22 +201,30 @@ impl AsmGenerator {
                         writeln!(f, "    idiv rdi")?;
                     },
                     BinaryOpEq => {
-                        writeln!(f, "    cmp rax, rdi")?;
+                        let lsize = lval_size(lhs).unwrap_or(8);
+                        let index = lsize.trailing_zeros() as usize;
+                        writeln!(f, "    cmp {}, {}", CALC_REGS[0][index], CALC_REGS[1][index])?;
                         writeln!(f, "    sete al")?;
                         writeln!(f, "    movzb rax, al")?;
                     },
                     BinaryOpNe => {
-                        writeln!(f, "    cmp rax, rdi")?;
+                        let lsize = lval_size(lhs).unwrap_or(8);
+                        let index = lsize.trailing_zeros() as usize;
+                        writeln!(f, "    cmp {}, {}", CALC_REGS[0][index], CALC_REGS[1][index])?;
                         writeln!(f, "    setne al")?;
                         writeln!(f, "    movzb rax, al")?;
                     },
                     BinaryOpGr => {
-                        writeln!(f, "    cmp rax, rdi")?;
+                        let lsize = lval_size(lhs).unwrap_or(8);
+                        let index = lsize.trailing_zeros() as usize;
+                        writeln!(f, "    cmp {}, {}", CALC_REGS[0][index], CALC_REGS[1][index])?;
                         writeln!(f, "    setl al")?;
                         writeln!(f, "    movzb rax, al")?;
                     },
                     BinaryOpGe => {
-                        writeln!(f, "    cmp rax, rdi")?;
+                        let lsize = lval_size(lhs).unwrap_or(8);
+                        let index = lsize.trailing_zeros() as usize;
+                        writeln!(f, "    cmp {}, {}", CALC_REGS[0][index], CALC_REGS[1][index])?;
                         writeln!(f, "    setle al")?;
                         writeln!(f, "    movzb rax, al")?;
                     },

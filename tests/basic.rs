@@ -166,6 +166,50 @@ fn calc_type() {
                           a = 1;\
                           return a;\
                       }", 1);
+    check_return_num("fn main() {\
+                          let a: i8;\
+                          let b: i8;\
+                          a = -1;\
+                          b = 1;\
+                          if a < b { \
+                              return 1;\
+                          } else { \
+                              return 2;\
+                          }
+                      }", 1);
+    check_return_num("fn main() {\
+                          let a: i16;\
+                          let b: i16;\
+                          a = -1;\
+                          b = 1;\
+                          if a < b { \
+                              return 1;\
+                          } else { \
+                              return 2;\
+                          }
+                      }", 1);
+    check_return_num("fn main() {\
+                          let a: i32;\
+                          let b: i32;\
+                          a = -1;\
+                          b = 1;\
+                          if a < b { \
+                              return 1;\
+                          } else { \
+                              return 2;\
+                          }
+                      }", 1);
+    check_return_num("fn main() {\
+                          let a: i64;\
+                          let b: i64;\
+                          a = -1;\
+                          b = 1;\
+                          if a < b { \
+                              return 1;\
+                          } else { \
+                              return 2;\
+                          }
+                      }", 1);
     // To check upper bits are cleared.
     check_return_num("static a: i8;\
                       fn main() {\
