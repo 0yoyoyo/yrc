@@ -748,7 +748,7 @@ impl Parser {
         self.cur_type = if tokens.expect_op("->") {
             self.typ(tokens)?
         } else {
-            Type::Int8
+            Type::Uint8
         };
 
         let new = Func {
