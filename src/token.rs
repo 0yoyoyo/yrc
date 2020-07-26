@@ -180,7 +180,7 @@ fn lex_num(bytes: &[u8], cur: &mut usize) -> Token {
     }
 }
 
-fn lex_op(bytes: &[u8], cur: &mut usize) -> Token {
+fn lex_cmp(bytes: &[u8], cur: &mut usize) -> Token {
     let mut tmp: Vec<u8> = Vec::new();
     let pos = *cur;
     loop {
@@ -331,7 +331,7 @@ pub fn tokenize(formula: &str) -> Result<Vec<Token>, TokenError> {
             },
             b'<' | b'>' |
             b'=' | b'!' => {
-                let token = lex_op(bytes, &mut cur);
+                let token = lex_cmp(bytes, &mut cur);
                 tokens.push(token);
             },
             b'-' => {
