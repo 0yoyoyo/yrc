@@ -26,8 +26,10 @@ Options:
 
 - **Pattern match**
 - **Mutability**
+- **Type inference**
 - **Ownership**
 - **Structs**
+- **Tuples**
 - **Implementations**
 - **closure**
 - **Traits**
