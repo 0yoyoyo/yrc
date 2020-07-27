@@ -28,6 +28,7 @@ pub enum AsmError {
 
 impl fmt::Display for AsmError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        // TODO: Report error with the code position.
         match self {
             Io(e) => write!(f, "IO error! ({})", e),
             Context => write!(f, "Lvalue is not assignable!"),
