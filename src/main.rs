@@ -1,3 +1,7 @@
+use std::env;
+use yrc::compiler_main;
+
 fn main() {
-    println!("Hello, world!");
+    let args = env::args().collect();
+    compiler_main(args);
 }
